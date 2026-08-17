@@ -1,0 +1,5 @@
+import { Component } from '@angular/core';
+import { ApiService } from '../../core/api.service';
+import { PageComponent } from '../../shared/page.component';
+@Component({standalone:true,imports:[PageComponent],template:`<app-page eyebrow="AUTHORIZATION" title="Permissions" description="Permission catalog used by identity-admin authorization checks."/><div class="panel table-wrap"><table><thead><tr><th>Permission</th><th>Code</th><th>Description</th><th>Status</th></tr></thead><tbody>@for(p of rows;track p.permission_id||p.permissionId){<tr><td><strong>{{p.permission_name||p.permissionName||p.name}}</strong></td><td><code>{{p.permission_code||p.permissionCode}}</code></td><td>{{p.description||'—'}}</td><td><span class="badge good">{{p.status}}</span></td></tr>}@empty{<tr><td colspan="4" class="empty">No permissions returned.</td></tr>}</tbody></table></div>`})
+export class PermissionsComponent {rows:any[]=[];constructor(api:ApiService){api.get<any>('/authorization/permissions',{page:1,limit:200}).subscribe({next:r=>this.rows=r?.data?.items||r?.items||r?.data||[]})}}

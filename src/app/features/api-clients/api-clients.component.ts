@@ -1,0 +1,5 @@
+import { Component } from '@angular/core';
+import { ApiService } from '../../core/api.service';
+import { PageComponent } from '../../shared/page.component';
+@Component({standalone:true,imports:[PageComponent],template:`<app-page eyebrow="APPLICATIONS" title="API Clients" description="Machine clients, scopes and client lifecycle operations."/><div class="panel table-wrap"><table><thead><tr><th>Name</th><th>Client ID</th><th>Type</th><th>Status</th><th>Scopes</th></tr></thead><tbody>@for(c of rows;track c.id||c.api_client_id){<tr><td><strong>{{c.client_name||c.clientName}}</strong></td><td><code>{{c.client_id||c.clientId}}</code></td><td>{{c.client_type||c.clientType||'—'}}</td><td><span class="badge good">{{c.status}}</span></td><td>{{c.scopes?.join(', ')||'—'}}</td></tr>}@empty{<tr><td colspan="5" class="empty">No API clients returned.</td></tr>}</tbody></table></div>`})
+export class ApiClientsComponent {rows:any[]=[];constructor(api:ApiService){api.get<any>('/api-clients',{page:1,limit:100}).subscribe({next:r=>this.rows=r?.data?.items||r?.items||r?.data||[]})}}

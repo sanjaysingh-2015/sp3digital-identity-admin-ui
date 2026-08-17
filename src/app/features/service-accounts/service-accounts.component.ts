@@ -1,0 +1,5 @@
+import { Component } from '@angular/core';
+import { ApiService } from '../../core/api.service';
+import { PageComponent } from '../../shared/page.component';
+@Component({standalone:true,imports:[PageComponent],template:`<app-page eyebrow="APPLICATIONS" title="Service Accounts" description="Non-human identities and their backing API clients."/><div class="panel table-wrap"><table><thead><tr><th>Account</th><th>Service code</th><th>Organization</th><th>Status</th><th>Expires</th></tr></thead><tbody>@for(a of rows;track a.id||a.service_account_id){<tr><td><strong>{{a.account_name||a.accountName}}</strong></td><td><code>{{a.service_code||a.serviceCode}}</code></td><td>{{a.organization_id||a.organizationId||'—'}}</td><td><span class="badge good">{{a.status}}</span></td><td>{{a.expires_on||a.expiresOn||'—'}}</td></tr>}@empty{<tr><td colspan="5" class="empty">No service accounts returned.</td></tr>}</tbody></table></div>`})
+export class ServiceAccountsComponent {rows:any[]=[];constructor(api:ApiService){api.get<any>('/service-accounts',{page:1,limit:100}).subscribe({next:r=>this.rows=r?.data?.items||r?.items||r?.data||[]})}}

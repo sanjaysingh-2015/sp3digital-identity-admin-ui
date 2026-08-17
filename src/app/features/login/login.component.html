@@ -1,0 +1,152 @@
+<div class="login-page">
+
+    <div class="login-card">
+
+        <div class="login-header">
+
+            <h1>SP3 Digital</h1>
+
+            <p>Identity Administration</p>
+
+        </div>
+
+        <form [formGroup]="loginForm" (ngSubmit)="login()" autocomplete="off">
+
+            <!-- Username / Email -->
+
+            <div class="form-group">
+
+                <label for="usernameOrEmail">
+                    Username or Email
+                </label>
+
+                <input id="usernameOrEmail" type="text" formControlName="usernameOrEmail"
+                    placeholder="Enter username or email" />
+
+                @if (
+                loginForm.controls.usernameOrEmail.touched &&
+                loginForm.controls.usernameOrEmail.invalid
+                ) {
+                <div class="field-error">
+                    Username or email is required
+                </div>
+                }
+
+            </div>
+
+
+            <!-- Password -->
+
+            <div class="form-group">
+
+                <label for="password">
+                    Password
+                </label>
+
+                <input id="password" type="password" formControlName="password" placeholder="Enter password" />
+
+                @if (
+                loginForm.controls.password.touched &&
+                loginForm.controls.password.invalid
+                ) {
+                <div class="field-error">
+                    Password is required
+                </div>
+                }
+
+            </div>
+
+
+            <!-- Tenant -->
+
+            <div class="form-group tenant-group">
+
+                <label for="tenant">
+                    Tenant
+                </label>
+
+                <input id="tenant" type="text" formControlName="tenant" placeholder="Type at least 5 characters"
+                    autocomplete="off" />
+
+                @if (tenantLoading) {
+
+                <div class="tenant-loading">
+                    Searching...
+                </div>
+
+                }
+
+                @if (
+                !tenantLoading &&
+                showTenantList &&
+                tenants.length > 0
+                ) {
+
+                <div class="tenant-dropdown">
+
+                    @for (
+                    tenant of tenants;
+                    track tenant.tenantUuid
+                    ) {
+
+                    <div class="tenant-option" (click)="selectTenant(tenant)">
+
+                        <div class="tenant-name">
+                            {{ tenant.tenantName }}
+                        </div>
+
+                        <div class="tenant-code">
+                            {{ tenant.tenantCode }}
+                        </div>
+
+                    </div>
+
+                    }
+
+                </div>
+
+                }
+
+                @if (
+                !tenantLoading &&
+                tenants.length === 0 &&
+                (loginForm.controls.tenant.value?.trim().length ?? 0) >= 5
+                ) {
+
+                <div class="tenant-no-results">
+                    No tenants found
+                </div>
+
+                }
+
+            </div>
+
+
+            <!-- Error -->
+
+            @if (errorMessage) {
+
+            <div class="login-error">
+                {{ errorMessage }}
+            </div>
+
+            }
+
+
+            <!-- Login -->
+
+            <button type="submit" [disabled]="loading">
+
+                @if (loading) {
+                Signing in...
+                } @else {
+                Sign In
+                }
+
+            </button>
+
+        </form>
+
+    </div>
+
+</div>

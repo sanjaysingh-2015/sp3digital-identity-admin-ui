@@ -1,0 +1,3 @@
+# N-Mod EXT ignore file
+.nmodignore
+node_modules/
