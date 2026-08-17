@@ -55,8 +55,6 @@ export class LoginComponent implements OnInit {
         switchMap((value) => {
           const searchValue = (value ?? "").trim();
 
-          console.log("Searching tenants:", searchValue);
-
           this.tenantLoading = true;
 
           return this.authService.searchTenants(searchValue).pipe(
@@ -82,19 +80,14 @@ export class LoginComponent implements OnInit {
 
       .subscribe({
         next: (response) => {
-          console.log("Tenant API response:", response);
-
           this.tenants = response.data || [];
 
           this.showTenantList = this.tenants.length > 0;
-
-          console.log("Dropdown tenants:", this.tenants);
         },
       });
   }
 
   selectTenant(tenant: Tenant): void {
-    console.log("Selected tenant:", tenant);
     this.loginForm.patchValue({
       tenant: `${tenant.tenantName} (${tenant.tenantCode})`,
       tenantUuid: tenant.tenantUuid,

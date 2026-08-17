@@ -1,0 +1,195 @@
+<app-page
+  eyebrow="AUTHORIZATION"
+  title="Roles"
+  description="Define reusable RBAC roles and assign permissions."
+>
+  <button
+    actions
+    class="primary"
+    type="button"
+    (click)="openCreate()"
+  >
+    + Create role
+  </button>
+</app-page>
+
+
+<!-- Roles Table -->
+
+<div class="panel table-wrap">
+
+  <table>
+
+    <thead>
+      <tr>
+        <th>Role</th>
+        <th>Code</th>
+        <th>Description</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+
+    <tbody>
+
+      @for (r of rows; track r.role_id || r.roleId) {
+
+        <tr>
+
+          <td>
+            <strong>
+              {{ r.role_name || r.roleName }}
+            </strong>
+          </td>
+
+          <td>
+            <code>
+              {{ r.role_code || r.roleCode }}
+            </code>
+          </td>
+
+          <td>
+            {{ r.description || '—' }}
+          </td>
+
+          <td>
+
+            <span
+              class="badge"
+              [class.good]="r.status === 'ACTIVE'"
+            >
+              {{ r.status }}
+            </span>
+
+          </td>
+
+        </tr>
+
+      }
+
+      @empty {
+
+        <tr>
+          <td colspan="4" class="empty">
+            No roles returned.
+          </td>
+        </tr>
+
+      }
+
+    </tbody>
+
+  </table>
+
+</div>
+
+
+<!-- Create Role Modal -->
+
+@if (formOpen) {
+
+  <div
+    class="modal-backdrop"
+    (click)="closeCreate()"
+  >
+
+    <div
+      class="modal"
+      (click)="$event.stopPropagation()"
+    >
+
+      <div class="modal-header">
+
+        <div>
+          <h3>Create role</h3>
+
+          <p>
+            Create a reusable RBAC role.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          class="modal-close"
+          (click)="closeCreate()"
+          aria-label="Close"
+        >
+          ×
+        </button>
+
+      </div>
+
+
+      <div class="form-grid">
+
+        <!-- Role Name -->
+
+        <label>
+          <span>Role name</span>
+
+          <input
+            type="text"
+            [(ngModel)]="form.roleName"
+            placeholder="e.g. Identity Administrator"
+            autocomplete="off"
+          />
+        </label>
+
+
+        <!-- Role Code -->
+
+        <label>
+          <span>Role code</span>
+
+          <input
+            type="text"
+            [(ngModel)]="form.roleCode"
+            placeholder="e.g. IDENTITY_ADMIN"
+            autocomplete="off"
+          />
+        </label>
+
+
+        <!-- Description -->
+
+        <label class="full-width">
+
+          <span>Description</span>
+
+          <textarea
+            [(ngModel)]="form.description"
+            rows="4"
+            placeholder="Enter role description"
+          ></textarea>
+
+        </label>
+
+      </div>
+
+
+      <!-- Modal Actions -->
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="secondary"
+          (click)="closeCreate()"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="button"
+          class="primary"
+          (click)="create()"
+        >
+          Create
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+}

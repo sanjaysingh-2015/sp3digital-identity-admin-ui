@@ -1,0 +1,509 @@
+<app-page
+  eyebrow="IDENTITY"
+  title="Users"
+  description="Manage administrator-visible users and their role assignments."
+>
+
+  <button
+    actions
+    type="button"
+    class="primary"
+    (click)="openCreate()"
+  >
+    + Create user
+  </button>
+
+</app-page>
+
+
+<!-- =========================================================
+     SEARCH / FILTER TOOLBAR
+========================================================= -->
+
+<div class="toolbar">
+
+  <input
+    type="text"
+    [(ngModel)]="search"
+    (keyup.enter)="load()"
+    placeholder="Search username, name or email"
+  />
+
+  <select
+    [(ngModel)]="status"
+    (change)="load()"
+  >
+    <option value="">All statuses</option>
+    <option value="ACTIVE">ACTIVE</option>
+    <option value="INACTIVE">INACTIVE</option>
+    <option value="SUSPENDED">SUSPENDED</option>
+  </select>
+
+  <button
+    type="button"
+    class="secondary"
+    (click)="load()"
+    [disabled]="loading"
+  >
+    @if (loading) {
+      Loading...
+    } @else {
+      Refresh
+    }
+  </button>
+
+</div>
+
+
+<!-- =========================================================
+     USERS TABLE
+========================================================= -->
+
+<div class="panel table-wrap">
+
+  <table>
+
+    <thead>
+
+      <tr>
+        <th>User</th>
+        <th>Email</th>
+        <th>Type</th>
+        <th>Status</th>
+        <th>Created</th>
+        <th></th>
+      </tr>
+
+    </thead>
+
+
+    <tbody>
+
+      @for (
+        user of rows;
+        track user.user_id || user.userId
+      ) {
+
+        <tr>
+
+          <!-- User -->
+
+          <td>
+
+            <strong>
+              {{ getUserName(user) }}
+            </strong>
+
+            <small>
+              {{ user.username }}
+            </small>
+
+          </td>
+
+
+          <!-- Email -->
+
+          <td>
+            {{ user.email || '—' }}
+          </td>
+
+
+          <!-- User Type -->
+
+          <td>
+            {{ getUserType(user) }}
+          </td>
+
+
+          <!-- Status -->
+
+          <td>
+
+            <span
+              class="badge"
+              [class.good]="user.status === 'ACTIVE'"
+              [class.warning]="user.status === 'SUSPENDED'"
+              [class.danger]="user.status === 'INACTIVE'"
+            >
+              {{ user.status }}
+            </span>
+
+          </td>
+
+
+          <!-- Created -->
+
+          <td>
+            {{ getCreatedDate(user) }}
+          </td>
+
+
+          <!-- Actions -->
+
+          <td>
+
+            <button
+              type="button"
+              class="link"
+              (click)="select(user)"
+            >
+              View
+            </button>
+
+          </td>
+
+        </tr>
+
+      }
+
+
+      @empty {
+
+        <tr>
+
+          <td
+            colspan="6"
+            class="empty"
+          >
+            @if (loading) {
+              Loading users...
+            } @else {
+              No users returned.
+            }
+          </td>
+
+        </tr>
+
+      }
+
+    </tbody>
+
+  </table>
+
+</div>
+
+
+<!-- =========================================================
+     CREATE USER MODAL
+========================================================= -->
+
+@if (formOpen) {
+
+  <div
+    class="modal-backdrop"
+    (click)="closeCreate()"
+  >
+
+    <div
+      class="modal"
+      (click)="$event.stopPropagation()"
+    >
+
+      <div class="modal-header">
+
+        <div>
+
+          <h3>Create user</h3>
+
+          <p>
+            Create a new identity user.
+          </p>
+
+        </div>
+
+        <button
+          type="button"
+          class="modal-close"
+          (click)="closeCreate()"
+        >
+          ×
+        </button>
+
+      </div>
+
+
+      <!-- Form -->
+
+      <div class="form-grid">
+
+        <!-- Username -->
+
+        <label>
+
+          <span>
+            Username
+          </span>
+
+          <input
+            type="text"
+            [(ngModel)]="form.username"
+            placeholder="Enter username"
+          />
+
+        </label>
+
+
+        <!-- Email -->
+
+        <label>
+
+          <span>
+            Email
+          </span>
+
+          <input
+            type="email"
+            [(ngModel)]="form.email"
+            placeholder="Enter email"
+          />
+
+        </label>
+
+
+        <!-- First Name -->
+
+        <label>
+
+          <span>
+            First name
+          </span>
+
+          <input
+            type="text"
+            [(ngModel)]="form.firstName"
+            placeholder="Enter first name"
+          />
+
+        </label>
+
+
+        <!-- Last Name -->
+
+        <label>
+
+          <span>
+            Last name
+          </span>
+
+          <input
+            type="text"
+            [(ngModel)]="form.lastName"
+            placeholder="Enter last name"
+          />
+
+        </label>
+
+
+        <!-- User Type -->
+
+        <label>
+
+          <span>
+            User type
+          </span>
+
+          <select
+            [(ngModel)]="form.userType"
+          >
+
+            <option value="USER">
+              USER
+            </option>
+
+            <option value="ADMIN">
+              ADMIN
+            </option>
+
+            <option value="SERVICE">
+              SERVICE
+            </option>
+
+          </select>
+
+        </label>
+
+      </div>
+
+
+      <!-- Modal actions -->
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="secondary"
+          (click)="closeCreate()"
+          [disabled]="creating"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="button"
+          class="primary"
+          (click)="create()"
+          [disabled]="creating"
+        >
+
+          @if (creating) {
+            Creating...
+          } @else {
+            Create
+          }
+
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+}
+
+
+<!-- =========================================================
+     USER DETAILS MODAL
+========================================================= -->
+
+@if (selected) {
+
+  <div
+    class="modal-backdrop"
+    (click)="closeDetails()"
+  >
+
+    <div
+      class="modal details-modal"
+      (click)="$event.stopPropagation()"
+    >
+
+      <div class="modal-header">
+
+        <div>
+
+          <h3>
+            User details
+          </h3>
+
+          <p>
+            Identity and account information.
+          </p>
+
+        </div>
+
+        <button
+          type="button"
+          class="modal-close"
+          (click)="closeDetails()"
+        >
+          ×
+        </button>
+
+      </div>
+
+
+      <!-- User summary -->
+
+      <div class="user-summary">
+
+        <div class="summary-item">
+
+          <span>
+            Name
+          </span>
+
+          <strong>
+            {{ getUserName(selected) }}
+          </strong>
+
+        </div>
+
+
+        <div class="summary-item">
+
+          <span>
+            Username
+          </span>
+
+          <strong>
+            {{ selected.username || '—' }}
+          </strong>
+
+        </div>
+
+
+        <div class="summary-item">
+
+          <span>
+            Email
+          </span>
+
+          <strong>
+            {{ selected.email || '—' }}
+          </strong>
+
+        </div>
+
+
+        <div class="summary-item">
+
+          <span>
+            User Type
+          </span>
+
+          <strong>
+            {{ getUserType(selected) }}
+          </strong>
+
+        </div>
+
+
+        <div class="summary-item">
+
+          <span>
+            Status
+          </span>
+
+          <span
+            class="badge"
+            [class.good]="selected.status === 'ACTIVE'"
+          >
+            {{ selected.status }}
+          </span>
+
+        </div>
+
+      </div>
+
+
+      <!-- Raw details -->
+
+      <details class="raw-details">
+
+        <summary>
+          View raw response
+        </summary>
+
+        <pre>{{ selected | json }}</pre>
+
+      </details>
+
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="secondary"
+          (click)="closeDetails()"
+        >
+          Close
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+}
