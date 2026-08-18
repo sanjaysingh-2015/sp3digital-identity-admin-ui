@@ -1,7 +1,7 @@
 <app-page
   eyebrow="AUTHORIZATION"
-  title="Roles"
-  description="Define reusable RBAC roles and assign permissions."
+  title="Permissions"
+  description="Define reusable RBAC permissions and assign permissions."
 >
   <button
     actions
@@ -9,55 +9,73 @@
     class="primary"
     (click)="openCreate()"
   >
-    + Create role
+    + Create permission
   </button>
 </app-page>
 
+
 <!-- =========================================================
-     AG GRID
+     ROLE GRID
 ========================================================= -->
-<div class="panel grid-panel">
+<div class="panel permission-grid-panel">
+
   <ag-grid-angular
-    class="roles-grid"
+    class="ag-theme-quartz permission-grid"
     [rowData]="rows"
     [columnDefs]="columnDefs"
     [defaultColDef]="defaultColDef"
-    [gridOptions]="gridOptions"
+    [animateRows]="true"
+    [pagination]="true"
+    [paginationPageSize]="20"
+    [paginationPageSizeSelector]="[10, 20, 50, 100]"
+    [suppressCellFocus]="true"
     (gridReady)="onGridReady($event)"
+    (cellClicked)="onCellClicked($event)"
   >
   </ag-grid-angular>
+
 </div>
+
 
 <!-- =========================================================
      CREATE / EDIT ROLE MODAL
 ========================================================= -->
 
 @if (formOpen) {
+
   <div
     class="modal-backdrop"
     (click)="closeCreate()"
   >
+
     <div
-      class="modal role-form-modal"
+      class="modal permission-form-modal"
       (click)="$event.stopPropagation()"
     >
+
+      <!-- Header -->
+
       <div class="modal-header">
+
         <div>
+
           <h3>
             @if (editMode) {
-              Edit role
+              Edit permission
             } @else {
-              Create role
+              Create permission
             }
           </h3>
+
           <p>
             @if (editMode) {
-              Update the RBAC role information.
+              Update the RBAC permission information.
             } @else {
-              Create a reusable RBAC role.
+              Create a reusable RBAC permission.
             }
           </p>
         </div>
+
         <button
           type="button"
           class="modal-close"
@@ -68,41 +86,68 @@
         </button>
       </div>
 
-      <!-- ===================================================
-           ROLE FORM
-      ==================================================== -->
+      <!-- Form -->
       <div class="form-grid">
-        <!-- Role Name -->
+        <!-- Permission Name -->
         <label>
           <span>
-            Role name <b>*</b>
+            Permission name <b>*</b>
           </span>
+
           <input
             type="text"
-            [(ngModel)]="form.roleName"
+            [(ngModel)]="form.permissionName"
             placeholder="e.g. Identity Administrator"
             autocomplete="off"
           />
         </label>
-        <!-- Role Type -->
+        <!-- Resource -->
         <label>
           <span>
-            Role type <b>*</b>
+            Resource <b>*</b>
           </span>
+
           <select
-            [(ngModel)]="form.roleType"
+            [(ngModel)]="form.resource"
           >
+
             @for (
-              roleType of roleTypes;
-              track roleType
+              resource of resources;
+              track resource
             ) {
-              <option [value]="roleType">
-                {{ formatRoleType(roleType) }}
+              <option
+                [value]="resource"
+              >
+                {{ resource }}
               </option>
             }
           </select>
         </label>
+        <!-- Actions -->
+         <label>
+          <span>
+            Action <b>*</b>
+          </span>
+
+          <select
+            [(ngModel)]="form.resource"
+          >
+
+            @for (
+              action of actions;
+              track action
+            ) {
+              <option
+                [value]="action"
+              >
+                {{ action }}
+              </option>
+            }
+          </select>
+        </label>
+
         <!-- Description -->
+
         <label class="full-width">
           <span>
             Description
@@ -110,11 +155,12 @@
           <textarea
             [(ngModel)]="form.description"
             rows="4"
-            placeholder="Enter role description"
+            placeholder="Enter permission description"
           ></textarea>
         </label>
       </div>
       <!-- Actions -->
+
       <div class="modal-actions">
         <button
           type="button"
@@ -149,27 +195,37 @@
   </div>
 }
 
+
 <!-- =========================================================
      ROLE DETAILS MODAL
 ========================================================= -->
-@if (selected) {
+
+@if (selected && !formOpen) {
+
   <div
     class="modal-backdrop"
     (click)="closeDetails()"
   >
+
     <div
       class="modal details-modal"
       (click)="$event.stopPropagation()"
     >
+
       <div class="modal-header">
+
         <div>
+
           <h3>
-            Role details
+            Permission details
           </h3>
+
           <p>
-            RBAC role information.
+            RBAC permission information.
           </p>
+
         </div>
+
         <button
           type="button"
           class="modal-close"
@@ -178,41 +234,71 @@
         >
           ×
         </button>
+
       </div>
 
-      <!-- Role summary -->
-      <div class="role-summary">
+
+      <!-- Permission summary -->
+
+      <div class="permission-summary">
+
         <div class="summary-item">
-          <span>Role Name</span>
+
+          <span>
+            Permission name
+          </span>
+
           <strong>
             {{
-              selected.role_name ||
-              selected.roleName ||
+              selected.permission_name ||
+              selected.permissionName ||
               "—"
             }}
           </strong>
+
         </div>
+
+
         <div class="summary-item">
-          <span>Role Type</span>
+
+          <span>
+            Permission type
+          </span>
+
           <strong>
             {{
-              formatRoleType(
-                selected.role_type ||
-                selected.roleType
+              formatPermissionType(
+                selected.permission_type ||
+                selected.permissionType
               )
             }}
           </strong>
+
         </div>
+
+
         <div class="summary-item">
-          <span>Description</span>
+
+          <span>
+            Description
+          </span>
+
           <strong>
-            {{ selected.description || "—" }}
+            {{
+              selected.description ||
+              "—"
+            }}
           </strong>
+
         </div>
+
+
         <div class="summary-item">
+
           <span>
             Status
           </span>
+
           <span
             class="badge"
             [class.good]="selected.status === 'ACTIVE'"
@@ -224,16 +310,27 @@
           >
             {{ selected.status || "—" }}
           </span>
+
         </div>
+
       </div>
+
+
       <!-- Raw response -->
+
       <details class="raw-details">
+
         <summary>
           View raw response
         </summary>
+
         <pre>{{ selected | json }}</pre>
+
       </details>
+
+
       <div class="modal-actions">
+
         <button
           type="button"
           class="secondary"
@@ -241,7 +338,11 @@
         >
           Close
         </button>
+
       </div>
+
     </div>
+
   </div>
+
 }

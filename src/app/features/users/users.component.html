@@ -3,7 +3,6 @@
   title="Users"
   description="Manage administrator-visible users and their role assignments."
 >
-
   <button
     actions
     type="button"
@@ -12,23 +11,19 @@
   >
     + Create user
   </button>
-
 </app-page>
-
 
 <!-- =========================================================
      SEARCH / FILTER TOOLBAR
 ========================================================= -->
 
 <div class="toolbar">
-
   <input
     type="text"
     [(ngModel)]="search"
     (keyup.enter)="load()"
     placeholder="Search username, name or email"
   />
-
   <select
     [(ngModel)]="status"
     (change)="load()"
@@ -37,8 +32,8 @@
     <option value="ACTIVE">ACTIVE</option>
     <option value="INACTIVE">INACTIVE</option>
     <option value="SUSPENDED">SUSPENDED</option>
+    <option value="DELETED">DELETED</option>
   </select>
-
   <button
     type="button"
     class="secondary"
@@ -51,447 +46,343 @@
       Refresh
     }
   </button>
-
 </div>
 
-
 <!-- =========================================================
-     USERS TABLE
+     AG GRID
 ========================================================= -->
-
-<div class="panel table-wrap">
-
-  <table>
-
-    <thead>
-
-      <tr>
-        <th>User</th>
-        <th>Email</th>
-        <th>Type</th>
-        <th>Status</th>
-        <th>Created</th>
-        <th></th>
-      </tr>
-
-    </thead>
-
-
-    <tbody>
-
-      @for (
-        user of rows;
-        track user.user_id || user.userId
-      ) {
-
-        <tr>
-
-          <!-- User -->
-
-          <td>
-
-            <strong>
-              {{ getUserName(user) }}
-            </strong>
-
-            <small>
-              {{ user.username }}
-            </small>
-
-          </td>
-
-
-          <!-- Email -->
-
-          <td>
-            {{ user.email || '—' }}
-          </td>
-
-
-          <!-- User Type -->
-
-          <td>
-            {{ getUserType(user) }}
-          </td>
-
-
-          <!-- Status -->
-
-          <td>
-
-            <span
-              class="badge"
-              [class.good]="user.status === 'ACTIVE'"
-              [class.warning]="user.status === 'SUSPENDED'"
-              [class.danger]="user.status === 'INACTIVE'"
-            >
-              {{ user.status }}
-            </span>
-
-          </td>
-
-
-          <!-- Created -->
-
-          <td>
-            {{ getCreatedDate(user) }}
-          </td>
-
-
-          <!-- Actions -->
-
-          <td>
-
-            <button
-              type="button"
-              class="link"
-              (click)="select(user)"
-            >
-              View
-            </button>
-
-          </td>
-
-        </tr>
-
-      }
-
-
-      @empty {
-
-        <tr>
-
-          <td
-            colspan="6"
-            class="empty"
-          >
-            @if (loading) {
-              Loading users...
-            } @else {
-              No users returned.
-            }
-          </td>
-
-        </tr>
-
-      }
-
-    </tbody>
-
-  </table>
-
+<div class="panel grid-panel">
+  <ag-grid-angular
+    class="users-grid"
+    [rowData]="rows"
+    [columnDefs]="columnDefs"
+    [defaultColDef]="defaultColDef"
+    [gridOptions]="gridOptions"
+    (gridReady)="onGridReady($event)"
+  >
+  </ag-grid-angular>
 </div>
 
-
 <!-- =========================================================
-     CREATE USER MODAL
+     CREATE / EDIT USER MODAL
 ========================================================= -->
 
 @if (formOpen) {
-
   <div
     class="modal-backdrop"
     (click)="closeCreate()"
   >
-
     <div
-      class="modal"
+      class="modal user-form-modal"
       (click)="$event.stopPropagation()"
     >
-
       <div class="modal-header">
-
         <div>
-
-          <h3>Create user</h3>
-
+          <h3>
+            @if (editMode) {
+              Edit user
+            } @else {
+              Create user
+            }
+          </h3>
           <p>
-            Create a new identity user.
+            @if (editMode) {
+              Update identity and account information.
+            } @else {
+              Create a new identity user.
+            }
           </p>
-
         </div>
-
         <button
           type="button"
           class="modal-close"
           (click)="closeCreate()"
+          aria-label="Close"
         >
           ×
         </button>
-
       </div>
 
-
-      <!-- Form -->
-
+      <!-- ===================================================
+           USER FORM
+      ==================================================== -->
       <div class="form-grid">
-
         <!-- Username -->
-
         <label>
-
           <span>
-            Username
+            Username <b>*</b>
           </span>
-
           <input
             type="text"
             [(ngModel)]="form.username"
             placeholder="Enter username"
+            autocomplete="off"
           />
-
         </label>
-
-
         <!-- Email -->
-
         <label>
-
           <span>
-            Email
+            Email <b>*</b>
           </span>
-
           <input
             type="email"
             [(ngModel)]="form.email"
             placeholder="Enter email"
+            autocomplete="off"
           />
-
         </label>
-
-
         <!-- First Name -->
-
         <label>
-
           <span>
-            First name
+            First name <b>*</b>
           </span>
-
           <input
             type="text"
             [(ngModel)]="form.firstName"
             placeholder="Enter first name"
           />
-
         </label>
-
-
-        <!-- Last Name -->
-
+        <!-- Middle Name -->
         <label>
-
           <span>
-            Last name
+            Middle name
           </span>
-
+          <input
+            type="text"
+            [(ngModel)]="form.middleName"
+            placeholder="Enter middle name"
+          />
+        </label>
+        <!-- Last Name -->
+        <label>
+          <span>
+            Last name <b>*</b>
+          </span>
           <input
             type="text"
             [(ngModel)]="form.lastName"
             placeholder="Enter last name"
           />
-
         </label>
-
-
-        <!-- User Type -->
-
+        <!-- Display Name -->
         <label>
-
           <span>
-            User type
+            Display name
           </span>
-
+          <input
+            type="text"
+            [(ngModel)]="form.displayName"
+            placeholder="Enter display name"
+          />
+        </label>
+        <!-- Phone Country Code -->
+        <label>
+          <span>
+            Phone country code
+          </span>
+          <input
+            type="text"
+            [(ngModel)]="form.phoneCountryCode"
+            placeholder="e.g. +91"
+            maxlength="8"
+          />
+        </label>
+        <!-- Phone Number -->
+        <label>
+          <span>
+            Phone number
+          </span>
+          <input
+            type="tel"
+            [(ngModel)]="form.phoneNumber"
+            placeholder="Enter phone number"
+          />
+        </label>
+        <!-- User Type -->
+        <label>
+          <span>
+            User type <b>*</b>
+          </span>
           <select
             [(ngModel)]="form.userType"
           >
-
-            <option value="USER">
-              USER
-            </option>
-
-            <option value="ADMIN">
-              ADMIN
-            </option>
-
-            <option value="SERVICE">
-              SERVICE
-            </option>
-
+            @for (
+              userType of userTypes;
+              track userType
+            ) {
+              <option [value]="userType">
+                {{ userType }}
+              </option>
+            }
           </select>
-
         </label>
-
       </div>
-
-
-      <!-- Modal actions -->
-
+      <!-- Actions -->
       <div class="modal-actions">
-
         <button
           type="button"
           class="secondary"
           (click)="closeCreate()"
-          [disabled]="creating"
+          [disabled]="saving"
         >
           Cancel
         </button>
-
         <button
           type="button"
           class="primary"
-          (click)="create()"
-          [disabled]="creating"
+          (click)="save()"
+          [disabled]="saving"
         >
-
-          @if (creating) {
-            Creating...
+          @if (saving) {
+            @if (editMode) {
+              Updating...
+            } @else {
+              Creating...
+            }
           } @else {
-            Create
+            @if (editMode) {
+              Update
+            } @else {
+              Create
+            }
           }
-
         </button>
-
       </div>
-
     </div>
-
   </div>
-
 }
-
 
 <!-- =========================================================
      USER DETAILS MODAL
 ========================================================= -->
-
 @if (selected) {
-
   <div
     class="modal-backdrop"
     (click)="closeDetails()"
   >
-
     <div
       class="modal details-modal"
       (click)="$event.stopPropagation()"
     >
-
       <div class="modal-header">
-
         <div>
-
           <h3>
             User details
           </h3>
-
           <p>
             Identity and account information.
           </p>
-
         </div>
-
         <button
           type="button"
           class="modal-close"
           (click)="closeDetails()"
+          aria-label="Close"
         >
           ×
         </button>
-
       </div>
 
-
       <!-- User summary -->
-
       <div class="user-summary">
-
         <div class="summary-item">
-
-          <span>
-            Name
-          </span>
-
+          <span>Display Name</span>
           <strong>
-            {{ getUserName(selected) }}
+            {{
+              selected.display_name ||
+              selected.displayName ||
+              "—"
+            }}
           </strong>
-
         </div>
-
-
         <div class="summary-item">
-
-          <span>
-            Username
-          </span>
-
+          <span>Username</span>
           <strong>
-            {{ selected.username || '—' }}
+            {{ selected.username || "—" }}
           </strong>
-
         </div>
-
-
         <div class="summary-item">
-
-          <span>
-            Email
-          </span>
-
+          <span>Email</span>
           <strong>
-            {{ selected.email || '—' }}
+            {{ selected.email || "—" }}
           </strong>
-
         </div>
-
-
         <div class="summary-item">
-
+          <span>First Name</span>
+          <strong>
+            {{
+              selected.first_name ||
+              selected.firstName ||
+              "—"
+            }}
+          </strong>
+        </div>
+        <div class="summary-item">
+          <span>Middle Name</span>
+          <strong>
+            {{
+              selected.middle_name ||
+              selected.middleName ||
+              "—"
+            }}
+          </strong>
+        </div>
+        <div class="summary-item">
+          <span>Last Name</span>
+          <strong>
+            {{
+              selected.last_name ||
+              selected.lastName ||
+              "—"
+            }}
+          </strong>
+        </div>
+        <div class="summary-item">
+          <span>
+            Phone
+          </span>
+          <strong>
+            {{
+              selected.phone_country_code ||
+              selected.phoneCountryCode ||
+              ""
+            }}
+            {{
+              selected.phone_number ||
+              selected.phoneNumber ||
+              "—"
+            }}
+          </strong>
+        </div>
+        <div class="summary-item">
           <span>
             User Type
           </span>
-
           <strong>
             {{ getUserType(selected) }}
           </strong>
-
         </div>
-
-
         <div class="summary-item">
-
           <span>
             Status
           </span>
-
           <span
             class="badge"
             [class.good]="selected.status === 'ACTIVE'"
+            [class.danger]="selected.status === 'DELETED'"
           >
             {{ selected.status }}
           </span>
-
         </div>
-
       </div>
-
-
-      <!-- Raw details -->
-
+      <!-- Raw response -->
       <details class="raw-details">
-
         <summary>
           View raw response
         </summary>
-
         <pre>{{ selected | json }}</pre>
-
       </details>
-
-
       <div class="modal-actions">
-
         <button
           type="button"
           class="secondary"
@@ -499,11 +390,7 @@
         >
           Close
         </button>
-
       </div>
-
     </div>
-
   </div>
-
 }
