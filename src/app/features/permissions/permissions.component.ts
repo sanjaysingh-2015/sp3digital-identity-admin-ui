@@ -1,4 +1,4 @@
-import { Component, OnInit } from "@angular/core";
+import { Component, OnInit, ViewChild } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 
@@ -15,6 +15,7 @@ import {
 import { ApiService } from "../../core/api.service";
 import { UiService } from "../../core/ui.service";
 import { PageComponent } from "../../shared/page.component";
+import { ConfirmModalComponent } from "../../shared/components/confirm-modal/confirm-modal";
 
 // Register AG Grid community modules
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -43,6 +44,7 @@ interface ActionOption {
     FormsModule,
     PageComponent,
     AgGridAngular,
+    ConfirmModalComponent,
   ],
   templateUrl: "./permissions.component.html",
   styleUrls: ["./permissions.component.scss"],
@@ -60,6 +62,15 @@ export class PermissionsComponent implements OnInit {
   deleting = false;
 
   selected: any = null;
+
+  // =========================================================
+  // CONFIRM MODAL
+  // =========================================================
+
+  @ViewChild("confirmModal")
+  confirmModal!: ConfirmModalComponent;
+
+  private pendingDeletePermission: any = null;
 
   // =========================================================
   // CREATE / EDIT
@@ -403,17 +414,23 @@ export class PermissionsComponent implements OnInit {
   // =========================================================
 
   loadResourceCategories(): void {
+
     this.loadingResourceCategories = true;
+
     this.api
       .get<any>("/resources/categories")
       .subscribe({
+
         next: (response) => {
+
           this.resourceCategories =
             response?.data ||
             response ||
             [];
+
           this.loadingResourceCategories = false;
         },
+
         error: (error) => {
 
           this.loadingResourceCategories = false;
@@ -718,14 +735,19 @@ export class PermissionsComponent implements OnInit {
     this.saving = true;
 
     const request: any = {
+
       permissionName:
         this.form.permissionName.trim(),
+
       resourceCategory:
         this.form.resourceCategory,
+
       actionCategory:
         this.form.actionCategory,
+
       description:
         this.form.description.trim(),
+
       allowDuplicates:
         this.form.allowDuplicates,
     };
@@ -746,29 +768,42 @@ export class PermissionsComponent implements OnInit {
     // =======================================================
 
     if (this.editMode) {
+
       const permissionId =
         this.form.permissionId;
+
       if (!permissionId) {
+
         this.saving = false;
+
         this.ui.show(
           "Invalid permission ID",
         );
+
         return;
       }
+
       this.api
         .patch<any>(
           `/authorization/permissions/${permissionId}`,
           request,
         )
         .subscribe({
+
           next: () => {
+
             this.saving = false;
+
             this.formOpen = false;
+
             this.editMode = false;
+
             this.resetForm();
+
             this.ui.show(
               "Permission updated successfully",
             );
+
             this.load();
           },
 
@@ -852,13 +887,41 @@ export class PermissionsComponent implements OnInit {
       permission?.permission_name ||
       permission?.permissionName ||
       "this permission";
-    const confirmed =
-      window.confirm(
+
+    this.pendingDeletePermission = permission;
+
+    this.confirmModal.open({
+      title: "Delete permission",
+      message:
         `Are you sure you want to delete permission "${permissionName}"?\n\n` +
         `The permission will be marked as DELETED and will not be physically removed.`,
-      );
+      confirmText: "Delete",
+      cancelText: "Cancel",
+    });
+  }
 
-    if (!confirmed) {
+  /**
+   * Bound to the confirm-modal's (confirmed) output.
+   * Runs the actual soft-delete once the user confirms.
+   */
+  onDeletePermissionConfirmed(): void {
+
+    const permission = this.pendingDeletePermission;
+
+    this.pendingDeletePermission = null;
+
+    if (!permission) {
+      return;
+    }
+
+    const permissionId =
+      permission?.permission_id ||
+      permission?.permissionId;
+
+    if (!permissionId) {
+      this.ui.show(
+        "Invalid permission ID",
+      );
       return;
     }
 
@@ -892,6 +955,13 @@ export class PermissionsComponent implements OnInit {
       });
   }
 
+  /**
+   * Bound to the confirm-modal's (cancelled) output.
+   */
+  onDeletePermissionCancelled(): void {
+    this.pendingDeletePermission = null;
+  }
+
   // =========================================================
   // VIEW
   // =========================================================
@@ -918,19 +988,25 @@ export class PermissionsComponent implements OnInit {
         `/authorization/permissions/${permissionId}`,
       )
       .subscribe({
+
         next: (response) => {
+
           this.selected =
             response?.data ||
             response;
+
           this.loading = false;
         },
 
         error: (error) => {
+
           this.loading = false;
+
           console.error(
             "Failed to load permission:",
             error,
           );
+
           this.ui.show(
             error?.error?.message ||
             "Failed to load permission details",
@@ -1032,6 +1108,7 @@ export class PermissionsComponent implements OnInit {
     this.form = {
 
       permissionId: null,
+
       permissionName: "",
 
       resourceCategory: "",

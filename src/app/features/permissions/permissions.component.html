@@ -45,14 +45,14 @@
         <div>
           <h3>
             @if (editMode) {
-              Edit permission           
+              Edit permission
             } @else {
               Create permission
             }
           </h3>
           <p>
             @if (editMode) {
-              Update the RBAC permission information for
+              Update the RBAC permission information.
             } @else {
               Create a reusable RBAC permission.
             }
@@ -72,20 +72,18 @@
            PERMISSION FORM
       ==================================================== -->
       <div class="form-grid">
-        @if (editMode) {
-          <!-- Permission Name -->
-          <label class="full-width">
-            <span>
-              Permission Code <b>*</b>
-            </span>
-            <input
-              type="text"
-              [value]="form.resourceCategory + ':' + form.resource + ':' + form.action"
-              readonly
-              class="readonly-input"
-            />
-          </label>
-        }
+        <!-- Permission Name -->
+        <label class="full-width">
+          <span>
+            Permission name <b>*</b>
+          </span>
+          <input
+            type="text"
+            [(ngModel)]="form.permissionName"
+            placeholder="e.g. Identity Administrator"
+            autocomplete="off"
+          />
+        </label>
 
         <!-- Resource Category -->
         <label>
@@ -95,8 +93,7 @@
           <select
             [(ngModel)]="form.resourceCategory"
             (change)="onResourceCategoryChange()"
-            [disabled]="loadingResourceCategories || editMode"
-            [class.readonly-input]="editMode"
+            [disabled]="loadingResourceCategories"
           >
             <option value="">
               @if (loadingResourceCategories) {
@@ -125,8 +122,7 @@
           @if (editMode) {
             <select
               [(ngModel)]="form.resource"
-              [disabled]="!form.resourceCategory || loadingResources || editMode"
-              [class.readonly-input]="editMode"
+              [disabled]="!form.resourceCategory || loadingResources"
             >
               <option value="">
                 @if (loadingResources) {
@@ -181,8 +177,7 @@
           <select
             [(ngModel)]="form.actionCategory"
             (change)="onActionCategoryChange()"
-            [disabled]="loadingActionCategories || editMode"
-            [class.readonly-input]="editMode"
+            [disabled]="loadingActionCategories"
           >
             <option value="">
               @if (loadingActionCategories) {
@@ -211,8 +206,7 @@
           @if (editMode) {
             <select
               [(ngModel)]="form.action"
-              [disabled]="!form.actionCategory || loadingActions || editMode"
-              [class.readonly-input]="editMode"
+              [disabled]="!form.actionCategory || loadingActions"
             >
               <option value="">
                 @if (loadingActions) {
@@ -269,22 +263,21 @@
             rows="4"
             placeholder="Enter permission description"
           ></textarea>
-        </label>    
+        </label>
+
+        <!-- Force Save -->
+        <label class="full-width checkbox-label">
+          <input
+            type="checkbox"
+            [(ngModel)]="form.allowDuplicates"
+          />
+          <span>
+            Force Save
+          </span>
+        </label>
       </div>
       <!-- Actions -->
       <div class="modal-actions">
-        <!-- Force Save -->
-         @if (!editMode) {
-          <label class="full-width checkbox-label" style="margin-bottom: 0px !important;">
-            <input
-              type="checkbox"
-              [(ngModel)]="form.allowDuplicates"
-            />
-            <span>
-              Force Save
-            </span>
-          </label>
-        }
         <button
           type="button"
           class="secondary"
@@ -351,16 +344,6 @@
 
       <!-- Permission summary -->
       <div class="permission-summary">
-        <div class="summary-item">
-          <span>Permission Code</span>
-          <strong>
-            {{
-              selected.permission_code ||
-              selected.permissionCode ||
-              "—"
-            }}
-          </strong>
-        </div>
         <div class="summary-item">
           <span>Permission Name</span>
           <strong>
@@ -451,3 +434,12 @@
     </div>
   </div>
 }
+
+<!-- =========================================================
+     CONFIRM MODAL
+========================================================= -->
+<app-confirm-modal
+  #confirmModal
+  (confirmed)="onDeletePermissionConfirmed()"
+  (cancelled)="onDeletePermissionCancelled()"
+></app-confirm-modal>

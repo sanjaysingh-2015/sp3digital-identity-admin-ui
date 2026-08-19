@@ -245,3 +245,12 @@
     </div>
   </div>
 }
+
+<!-- =========================================================
+     CONFIRM MODAL
+========================================================= -->
+<app-confirm-modal
+  #confirmModal
+  (confirmed)="onDeleteRoleConfirmed()"
+  (cancelled)="onDeleteRoleCancelled()"
+></app-confirm-modal>

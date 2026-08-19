@@ -394,3 +394,13 @@
     </div>
   </div>
 }
+
+
+<!-- =========================================================
+     CONFIRM MODAL
+========================================================= -->
+<app-confirm-modal
+  #confirmModal
+  (confirmed)="onDeleteUserConfirmed()"
+  (cancelled)="onDeleteUserCancelled()"
+></app-confirm-modal>

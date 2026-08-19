@@ -1,4 +1,4 @@
-import { Component, OnInit } from "@angular/core";
+import { Component, OnInit, ViewChild } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 
@@ -15,6 +15,7 @@ import {
 import { ApiService } from "../../core/api.service";
 import { UiService } from "../../core/ui.service";
 import { PageComponent } from "../../shared/page.component";
+import { ConfirmModalComponent } from "../../shared/components/confirm-modal/confirm-modal";
 
 // Register AG Grid community modules
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -27,6 +28,7 @@ ModuleRegistry.registerModules([AllCommunityModule]);
     FormsModule,
     PageComponent,
     AgGridAngular,
+    ConfirmModalComponent,
   ],
   templateUrl: "./users.component.html",
   styleUrls: ["./users.component.scss"],
@@ -47,6 +49,16 @@ export class UsersComponent implements OnInit {
   deleting = false;
 
   selected: any = null;
+
+  
+  // =========================================================
+  // CONFIRM MODAL
+  // =========================================================
+
+  @ViewChild("confirmModal")
+  confirmModal!: ConfirmModalComponent;
+
+  private pendingDeleteUser: any = null;
 
   // =========================================================
   // CREATE / EDIT
@@ -262,21 +274,16 @@ export class UsersComponent implements OnInit {
       },
 
       onCellClicked: (params) => {
-
         const target =
           params.event?.target as HTMLElement;
-
         if (!target) {
           return;
         }
-
         const action =
           target.getAttribute("data-action");
-
         if (!action) {
           return;
         }
-
         switch (action) {
 
           case "view":
@@ -634,13 +641,33 @@ export class UsersComponent implements OnInit {
     }
     const userName =
       this.getUserName(user);
-    const confirmed =
-      window.confirm(
+    this.pendingDeleteUser = user;
+
+    this.confirmModal.open({
+      title: "Delete permission",
+      message:
         `Are you sure you want to delete user "${userName}"?\n\n` +
         `The user will be marked as DELETED and will not be physically removed.`,
-      );
+      confirmText: "Delete",
+      cancelText: "Cancel",
+    });
+  }
+  
+  /**
+   * Bound to the confirm-modal's (confirmed) output.
+   * Runs the actual soft-delete once the user confirms.
+   */
+  onDeleteUserConfirmed(): void {
+    const user = this.pendingDeleteUser;
 
-    if (!confirmed) {
+    this.pendingDeleteUser = null;
+    if (!user) {
+      return;
+    }
+    const userId = user?.user_id || user?.userId;
+
+    if (!userId) {
+      this.ui.show("Invalid user ID");
       return;
     }
 
@@ -672,6 +699,13 @@ export class UsersComponent implements OnInit {
           );
         },
       });
+  }
+
+    /**
+   * Bound to the confirm-modal's (cancelled) output.
+   */
+  onDeleteUserCancelled(): void {
+    this.pendingDeleteUser = null;
   }
 
   // =========================================================

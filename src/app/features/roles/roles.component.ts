@@ -1,4 +1,4 @@
-import { Component, OnInit } from "@angular/core";
+import { Component, OnInit, ViewChild } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 
@@ -15,6 +15,7 @@ import {
 import { ApiService } from "../../core/api.service";
 import { UiService } from "../../core/ui.service";
 import { PageComponent } from "../../shared/page.component";
+import { ConfirmModalComponent } from "../../shared/components/confirm-modal/confirm-modal";
 
 // Register AG Grid community modules
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -27,12 +28,12 @@ ModuleRegistry.registerModules([AllCommunityModule]);
     FormsModule,
     PageComponent,
     AgGridAngular,
+    ConfirmModalComponent,
   ],
   templateUrl: "./roles.component.html",
   styleUrls: ["./roles.component.scss"],
 })
 export class RolesComponent implements OnInit {
-
   // =========================================================
   // DATA
   // =========================================================
@@ -44,6 +45,15 @@ export class RolesComponent implements OnInit {
   deleting = false;
 
   selected: any = null;
+
+  // =========================================================
+  // CONFIRM MODAL
+  // =========================================================
+
+  @ViewChild("confirmModal")
+  confirmModal!: ConfirmModalComponent;
+
+  private pendingDeleteRole: any = null;
 
   // =========================================================
   // CREATE / EDIT
@@ -64,11 +74,7 @@ export class RolesComponent implements OnInit {
   // STATIC ROLE TYPES
   // =========================================================
 
-  readonly roleTypes: string[] = [
-    "SYSTEM",
-    "TENANT",
-    "ORGANIZATION",
-  ];
+  readonly roleTypes: string[] = ["SYSTEM", "TENANT", "ORGANIZATION"];
 
   // =========================================================
   // AG GRID
@@ -87,10 +93,7 @@ export class RolesComponent implements OnInit {
       cellRenderer: (params: ICellRendererParams) => {
         const role = params.data;
 
-        const roleName =
-          role?.role_name ||
-          role?.roleName ||
-          "—";
+        const roleName = role?.role_name || role?.roleName || "—";
 
         return `
           <div class="ag-role-cell">
@@ -107,10 +110,7 @@ export class RolesComponent implements OnInit {
       sortable: true,
       filter: true,
       valueGetter: (params) =>
-        this.formatRoleType(
-          params.data?.role_type ||
-          params.data?.roleType,
-        ),
+        this.formatRoleType(params.data?.role_type || params.data?.roleType),
     },
 
     {
@@ -140,10 +140,7 @@ export class RolesComponent implements OnInit {
           className += " good";
         } else if (status === "SUSPENDED") {
           className += " warning";
-        } else if (
-          status === "INACTIVE" ||
-          status === "DELETED"
-        ) {
+        } else if (status === "INACTIVE" || status === "DELETED") {
           className += " danger";
         }
 
@@ -163,19 +160,15 @@ export class RolesComponent implements OnInit {
       filter: false,
 
       cellRenderer: (params: ICellRendererParams) => {
-
         const role = params.data;
 
-        const roleId =
-          role?.role_id ||
-          role?.roleId;
+        const roleId = role?.role_id || role?.roleId;
 
         if (!roleId) {
           return "";
         }
 
-        const isDeleted =
-          role?.status === "DELETED";
+        const isDeleted = role?.status === "DELETED";
 
         if (isDeleted) {
           return `
@@ -223,23 +216,19 @@ export class RolesComponent implements OnInit {
       },
 
       onCellClicked: (params) => {
-
-        const target =
-          params.event?.target as HTMLElement;
+        const target = params.event?.target as HTMLElement;
 
         if (!target) {
           return;
         }
 
-        const action =
-          target.getAttribute("data-action");
+        const action = target.getAttribute("data-action");
 
         if (!action) {
           return;
         }
 
         switch (action) {
-
           case "view":
             this.select(params.data);
             break;
@@ -301,7 +290,6 @@ export class RolesComponent implements OnInit {
   // =========================================================
 
   load(): void {
-
     this.loading = true;
 
     this.api
@@ -310,9 +298,7 @@ export class RolesComponent implements OnInit {
         limit: 100,
       })
       .subscribe({
-
         next: (response) => {
-
           this.rows =
             response?.data?.items ||
             response?.items ||
@@ -324,10 +310,7 @@ export class RolesComponent implements OnInit {
 
           // Refresh AG Grid
           if (this.gridApi) {
-            this.gridApi.setGridOption(
-              "rowData",
-              this.rows,
-            );
+            this.gridApi.setGridOption("rowData", this.rows);
 
             setTimeout(() => {
               this.gridApi.sizeColumnsToFit();
@@ -336,18 +319,11 @@ export class RolesComponent implements OnInit {
         },
 
         error: (error) => {
-
           this.loading = false;
 
-          console.error(
-            "Failed to load roles:",
-            error,
-          );
+          console.error("Failed to load roles:", error);
 
-          this.ui.show(
-            error?.error?.message ||
-            "Failed to load roles",
-          );
+          this.ui.show(error?.error?.message || "Failed to load roles");
         },
       });
   }
@@ -357,7 +333,6 @@ export class RolesComponent implements OnInit {
   // =========================================================
 
   openCreate(): void {
-
     this.editMode = false;
 
     this.resetForm();
@@ -370,16 +345,10 @@ export class RolesComponent implements OnInit {
   // =========================================================
 
   openEdit(role: any): void {
-
-    const roleId =
-      role?.role_id ||
-      role?.roleId;
+    const roleId = role?.role_id || role?.roleId;
 
     if (!roleId) {
-
-      this.ui.show(
-        "Invalid role ID",
-      );
+      this.ui.show("Invalid role ID");
 
       return;
     }
@@ -387,21 +356,13 @@ export class RolesComponent implements OnInit {
     this.editMode = true;
 
     this.form = {
-
       roleId,
 
-      roleName:
-        role?.role_name ||
-        role?.roleName ||
-        "",
+      roleName: role?.role_name || role?.roleName || "",
 
-      roleType:
-        role?.role_type ||
-        role?.roleType ||
-        "TENANT",
+      roleType: role?.role_type || role?.roleType || "TENANT",
 
-      description:
-        role?.description || "",
+      description: role?.description || "",
     };
 
     this.formOpen = true;
@@ -412,7 +373,6 @@ export class RolesComponent implements OnInit {
   // =========================================================
 
   closeCreate(): void {
-
     if (this.saving) {
       return;
     }
@@ -429,7 +389,6 @@ export class RolesComponent implements OnInit {
   // =========================================================
 
   save(): void {
-
     if (!this.validateForm()) {
       return;
     }
@@ -437,15 +396,11 @@ export class RolesComponent implements OnInit {
     this.saving = true;
 
     const request = {
+      roleName: this.form.roleName.trim(),
 
-      roleName:
-        this.form.roleName.trim(),
+      roleType: this.form.roleType,
 
-      roleType:
-        this.form.roleType,
-
-      description:
-        this.form.description.trim(),
+      description: this.form.description.trim(),
     };
 
     // =======================================================
@@ -453,60 +408,39 @@ export class RolesComponent implements OnInit {
     // =======================================================
 
     if (this.editMode) {
-
-      const roleId =
-        this.form.roleId;
+      const roleId = this.form.roleId;
 
       if (!roleId) {
-
         this.saving = false;
 
-        this.ui.show(
-          "Invalid role ID",
-        );
+        this.ui.show("Invalid role ID");
 
         return;
       }
 
-      this.api
-        .patch<any>(
-          `/authorization/roles/${roleId}`,
-          request,
-        )
-        .subscribe({
+      this.api.patch<any>(`/authorization/roles/${roleId}`, request).subscribe({
+        next: () => {
+          this.saving = false;
 
-          next: () => {
+          this.formOpen = false;
 
-            this.saving = false;
+          this.editMode = false;
 
-            this.formOpen = false;
+          this.resetForm();
 
-            this.editMode = false;
+          this.ui.show("Role updated successfully");
 
-            this.resetForm();
+          this.load();
+        },
 
-            this.ui.show(
-              "Role updated successfully",
-            );
+        error: (error) => {
+          this.saving = false;
 
-            this.load();
-          },
+          console.error("Failed to update role:", error);
 
-          error: (error) => {
-
-            this.saving = false;
-
-            console.error(
-              "Failed to update role:",
-              error,
-            );
-
-            this.ui.show(
-              error?.error?.message ||
-              "Failed to update role",
-            );
-          },
-        });
+          this.ui.show(error?.error?.message || "Failed to update role");
+        },
+      });
 
       return;
     }
@@ -515,43 +449,27 @@ export class RolesComponent implements OnInit {
     // CREATE
     // =======================================================
 
-    this.api
-      .post<any>(
-        "/authorization/roles",
-        request,
-      )
-      .subscribe({
+    this.api.post<any>("/authorization/roles", request).subscribe({
+      next: () => {
+        this.saving = false;
 
-        next: () => {
+        this.formOpen = false;
 
-          this.saving = false;
+        this.resetForm();
 
-          this.formOpen = false;
+        this.ui.show("Role created successfully");
 
-          this.resetForm();
+        this.load();
+      },
 
-          this.ui.show(
-            "Role created successfully",
-          );
+      error: (error) => {
+        this.saving = false;
 
-          this.load();
-        },
+        console.error("Failed to create role:", error);
 
-        error: (error) => {
-
-          this.saving = false;
-
-          console.error(
-            "Failed to create role:",
-            error,
-          );
-
-          this.ui.show(
-            error?.error?.message ||
-            "Failed to create role",
-          );
-        },
-      });
+        this.ui.show(error?.error?.message || "Failed to create role");
+      },
+    });
   }
 
   // =========================================================
@@ -559,57 +477,65 @@ export class RolesComponent implements OnInit {
   // =========================================================
 
   deleteRole(role: any): void {
-    const roleId =
-      role?.role_id ||
-      role?.roleId;
+    const roleId = role?.role_id || role?.roleId;
     if (!roleId) {
-      this.ui.show(
-        "Invalid role ID",
-      );
+      this.ui.show("Invalid role ID");
       return;
     }
-    const roleName =
-      role?.role_name ||
-      role?.roleName ||
-      "this role";
-    const confirmed =
-      window.confirm(
+    const roleName = role?.role_name || role?.roleName || "this role";
+    this.pendingDeleteRole = role;
+
+    this.confirmModal.open({
+      title: "Delete permission",
+      message:
         `Are you sure you want to delete role "${roleName}"?\n\n` +
         `The role will be marked as DELETED and will not be physically removed.`,
-      );
+      confirmText: "Delete",
+      cancelText: "Cancel",
+    });
+  }
+  
+  /**
+   * Bound to the confirm-modal's (confirmed) output.
+   * Runs the actual soft-delete once the user confirms.
+   */
+  onDeleteRoleConfirmed(): void {
+    const role = this.pendingDeleteRole;
 
-    if (!confirmed) {
+    this.pendingDeleteRole = null;
+    if (!role) {
       return;
     }
+    const roleId = role?.role_id || role?.roleId;
 
+    if (!roleId) {
+      this.ui.show("Invalid role ID");
+      return;
+    }
     this.deleting = true;
     this.api
-      .patch<any>(
-        `/authorization/roles/${roleId}/status`,
-        {
-          status: "DELETED",
-        },
-      )
+      .patch<any>(`/authorization/roles/${roleId}/status`, {
+        status: "DELETED",
+      })
       .subscribe({
         next: () => {
           this.deleting = false;
-          this.ui.show(
-            "Role deleted successfully",
-          );
+          this.ui.show("Role deleted successfully");
           this.load();
         },
         error: (error) => {
           this.deleting = false;
-          console.error(
-            "Failed to delete role:",
-            error,
-          );
-          this.ui.show(
-            error?.error?.message ||
-            "Failed to delete role",
-          );
+          console.error("Failed to delete role:", error);
+          this.ui.show(error?.error?.message || "Failed to delete role");
         },
       });
+  }
+
+  /**
+   * Bound to the confirm-modal's (cancelled) output.
+   */
+  onDeleteRoleCancelled(): void {
+    this.pendingDeleteRole = null;
   }
 
   // =========================================================
@@ -617,52 +543,31 @@ export class RolesComponent implements OnInit {
   // =========================================================
 
   select(role: any): void {
-
-    const roleId =
-      role?.role_id ||
-      role?.roleId;
+    const roleId = role?.role_id || role?.roleId;
 
     if (!roleId) {
-
-      this.ui.show(
-        "Invalid role ID",
-      );
+      this.ui.show("Invalid role ID");
 
       return;
     }
 
     this.loading = true;
 
-    this.api
-      .get<any>(
-        `/authorization/roles/${roleId}`,
-      )
-      .subscribe({
+    this.api.get<any>(`/authorization/roles/${roleId}`).subscribe({
+      next: (response) => {
+        this.selected = response?.data || response;
 
-        next: (response) => {
+        this.loading = false;
+      },
 
-          this.selected =
-            response?.data ||
-            response;
+      error: (error) => {
+        this.loading = false;
 
-          this.loading = false;
-        },
+        console.error("Failed to load role:", error);
 
-        error: (error) => {
-
-          this.loading = false;
-
-          console.error(
-            "Failed to load role:",
-            error,
-          );
-
-          this.ui.show(
-            error?.error?.message ||
-            "Failed to load role details",
-          );
-        },
-      });
+        this.ui.show(error?.error?.message || "Failed to load role details");
+      },
+    });
   }
 
   // =========================================================
@@ -678,21 +583,14 @@ export class RolesComponent implements OnInit {
   // =========================================================
 
   validateForm(): boolean {
-
     if (!this.form.roleName.trim()) {
-
-      this.ui.show(
-        "Role name is required",
-      );
+      this.ui.show("Role name is required");
 
       return false;
     }
 
     if (!this.form.roleType) {
-
-      this.ui.show(
-        "Role type is required",
-      );
+      this.ui.show("Role type is required");
 
       return false;
     }
@@ -709,7 +607,6 @@ export class RolesComponent implements OnInit {
   // =========================================================
 
   formatRoleType(roleType: string | null | undefined): string {
-
     if (!roleType) {
       return "—";
     }
@@ -725,9 +622,7 @@ export class RolesComponent implements OnInit {
   // =========================================================
 
   resetForm(): void {
-
     this.form = {
-
       roleId: null,
 
       roleName: "",
@@ -743,7 +638,6 @@ export class RolesComponent implements OnInit {
   // =========================================================
 
   private escapeHtml(value: any): string {
-
     if (value === null || value === undefined) {
       return "";
     }
