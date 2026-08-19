@@ -73,9 +73,9 @@
       ==================================================== -->
       <div class="form-grid">
         <!-- Permission Name -->
-        <label>
+        <label class="full-width">
           <span>
-            Permission name <b>*</b>
+            Permission group name <b>*</b>
           </span>
           <input
             type="text"
@@ -84,42 +84,127 @@
             autocomplete="off"
           />
         </label>
-        <!-- Resource -->
+
+        <!-- Resource Category -->
+        <label>
+          <span>
+            Resource category <b>*</b>
+          </span>
+          <select
+            [(ngModel)]="form.resourceCategory"
+            (change)="onResourceCategoryChange()"
+            [disabled]="loadingResourceCategories"
+          >
+            <option value="">
+              @if (loadingResourceCategories) {
+                Loading categories...
+              } @else {
+                Select a resource category
+              }
+            </option>
+            @for (
+              category of resourceCategories;
+              track category
+            ) {
+              <option [value]="category">
+                {{ formatLabel(category) }}
+              </option>
+            }
+          </select>
+        </label>
+
+        <!-- Resource (multi-select) -->
         <label>
           <span>
             Resource <b>*</b>
           </span>
           <select
-            [(ngModel)]="form.resource"
+            multiple
+            [(ngModel)]="form.resources"
+            [disabled]="!form.resourceCategory || loadingResources"
+            class="multi-select"
           >
+            @if (loadingResources) {
+              <option disabled>Loading resources...</option>
+            } @else if (!form.resourceCategory) {
+              <option disabled>Select a resource category first</option>
+            } @else if (!resourceOptions.length) {
+              <option disabled>No resources found</option>
+            }
             @for (
-              resource of resources;
-              track resource
+              resource of resourceOptions;
+              track resource.resourceCode
             ) {
-              <option [value]="resource">
-                {{ resource }}
+              <option [value]="resource.resourceCode">
+                {{ resource.resourceName }}
+              </option>
+            }
+          </select>
+          <small class="field-hint">
+            Hold Ctrl / Cmd to select multiple.
+          </small>
+        </label>
+
+        <!-- Action Category -->
+        <label>
+          <span>
+            Action category <b>*</b>
+          </span>
+          <select
+            [(ngModel)]="form.actionCategory"
+            (change)="onActionCategoryChange()"
+            [disabled]="loadingActionCategories"
+          >
+            <option value="">
+              @if (loadingActionCategories) {
+                Loading categories...
+              } @else {
+                Select an action category
+              }
+            </option>
+            @for (
+              category of actionCategories;
+              track category
+            ) {
+              <option [value]="category">
+                {{ formatLabel(category) }}
               </option>
             }
           </select>
         </label>
-        <!-- Action -->
+
+        <!-- Action (multi-select) -->
         <label>
           <span>
             Action <b>*</b>
           </span>
           <select
-            [(ngModel)]="form.action"
+            multiple
+            [(ngModel)]="form.actions"
+            [disabled]="!form.actionCategory || loadingActions"
+            class="multi-select"
           >
+            @if (loadingActions) {
+              <option disabled>Loading actions...</option>
+            } @else if (!form.actionCategory) {
+              <option disabled>Select an action category first</option>
+            } @else if (!actionOptions.length) {
+              <option disabled>No actions found</option>
+            }
             @for (
-              action of actions;
-              track action
+              action of actionOptions;
+              track action.actionCode
             ) {
-              <option [value]="action">
-                {{ action }}
+              <option [value]="action.actionCode">
+                {{ action.actionName }}
               </option>
             }
           </select>
+          <small class="field-hint">
+            Hold Ctrl / Cmd to select multiple.
+          </small>
         </label>
+
         <!-- Description -->
         <label class="full-width">
           <span>
@@ -131,9 +216,21 @@
             placeholder="Enter permission description"
           ></textarea>
         </label>
+
+        
       </div>
       <!-- Actions -->
       <div class="modal-actions">
+        <!-- Force Save -->
+        <label class="full-width checkbox-label" style="margin-bottom: 0px !important;">
+          <input
+            type="checkbox"
+            [(ngModel)]="form.allowDuplicates"
+          />
+          <span>
+            Force Save
+          </span>
+        </label> 
         <button
           type="button"
           class="secondary"
@@ -211,18 +308,40 @@
           </strong>
         </div>
         <div class="summary-item">
-          <span>Resource</span>
+          <span>Resource Category</span>
           <strong>
-            {{ selected.resource || "—" }}
+            {{
+              formatLabel(
+                selected.resource_category ||
+                selected.resourceCategory
+              )
+            }}
           </strong>
         </div>
         <div class="summary-item">
-          <span>Action</span>
+          <span>Resource(s)</span>
           <strong>
-            {{ selected.action || "—" }}
+            {{ resourceLabels(selected) }}
           </strong>
         </div>
         <div class="summary-item">
+          <span>Action Category</span>
+          <strong>
+            {{
+              formatLabel(
+                selected.action_category ||
+                selected.actionCategory
+              )
+            }}
+          </strong>
+        </div>
+        <div class="summary-item">
+          <span>Action(s)</span>
+          <strong>
+            {{ actionLabels(selected) }}
+          </strong>
+        </div>
+        <div class="summary-item full-width">
           <span>Description</span>
           <strong>
             {{ selected.description || "—" }}

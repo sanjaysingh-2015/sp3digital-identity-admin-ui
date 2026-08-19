@@ -19,6 +19,22 @@ import { PageComponent } from "../../shared/page.component";
 // Register AG Grid community modules
 ModuleRegistry.registerModules([AllCommunityModule]);
 
+interface ResourceOption {
+  resourceCode: string;
+  resourceName: string;
+  description?: string | null;
+  resourceCategory?: string;
+  status?: string;
+}
+
+interface ActionOption {
+  actionCode: string;
+  actionName: string;
+  description?: string | null;
+  actionCategory?: string;
+  status?: string;
+}
+
 @Component({
   selector: "app-permissions",
   standalone: true,
@@ -56,30 +72,37 @@ export class PermissionsComponent implements OnInit {
     permissionId: null as number | string | null,
 
     permissionName: "",
-    resource: "",
-    action: "",
+
+    resourceCategory: "",
+    resources: [] as string[],
+
+    actionCategory: "",
+    actions: [] as string[],
+
     description: "",
+
+    allowDuplicates: false,
   };
 
   // =========================================================
-  // STATIC RESOURCES / ACTIONS
+  // RESOURCE CATEGORY / RESOURCE (CASCADING)
   // =========================================================
 
-  readonly resources: string[] = [
-    "USER",
-    "ROLE",
-    "PERMISSION",
-    "TENANT",
-    "ORGANIZATION",
-  ];
+  resourceCategories: string[] = [];
+  resourceOptions: ResourceOption[] = [];
 
-  readonly actions: string[] = [
-    "CREATE",
-    "READ",
-    "UPDATE",
-    "DELETE",
-    "MANAGE",
-  ];
+  loadingResourceCategories = false;
+  loadingResources = false;
+
+  // =========================================================
+  // ACTION CATEGORY / ACTION (CASCADING)
+  // =========================================================
+
+  actionCategories: string[] = [];
+  actionOptions: ActionOption[] = [];
+
+  loadingActionCategories = false;
+  loadingActions = false;
 
   // =========================================================
   // AG GRID
@@ -89,7 +112,7 @@ export class PermissionsComponent implements OnInit {
 
   columnDefs: ColDef[] = [
     {
-      headerName: "Permission",
+      headerName: "Permission Group",
       field: "permission_name",
       flex: 1.5,
       minWidth: 220,
@@ -302,6 +325,9 @@ export class PermissionsComponent implements OnInit {
 
   ngOnInit(): void {
     this.load();
+
+    this.loadResourceCategories();
+    this.loadActionCategories();
   }
 
   // =========================================================
@@ -371,6 +397,206 @@ export class PermissionsComponent implements OnInit {
   }
 
   // =========================================================
+  // RESOURCE CATEGORIES
+  // =========================================================
+
+  loadResourceCategories(): void {
+
+    this.loadingResourceCategories = true;
+
+    this.api
+      .get<any>("/resources/categories")
+      .subscribe({
+
+        next: (response) => {
+
+          this.resourceCategories =
+            response?.data ||
+            response ||
+            [];
+
+          this.loadingResourceCategories = false;
+        },
+
+        error: (error) => {
+
+          this.loadingResourceCategories = false;
+
+          console.error(
+            "Failed to load resource categories:",
+            error,
+          );
+
+          this.ui.show(
+            error?.error?.message ||
+            "Failed to load resource categories",
+          );
+        },
+      });
+  }
+
+  // =========================================================
+  // RESOURCES FOR A CATEGORY
+  // =========================================================
+
+  loadResourcesForCategory(
+    category: string,
+    preserveSelection = false,
+  ): void {
+
+    if (!preserveSelection) {
+      this.form.resources = [];
+    }
+
+    if (!category) {
+      this.resourceOptions = [];
+      return;
+    }
+
+    this.loadingResources = true;
+
+    this.api
+      .get<any>(
+        `/resources/category/${category}`,
+      )
+      .subscribe({
+
+        next: (response) => {
+
+          this.resourceOptions =
+            response?.data ||
+            response ||
+            [];
+
+          this.loadingResources = false;
+        },
+
+        error: (error) => {
+
+          this.loadingResources = false;
+
+          console.error(
+            "Failed to load resources:",
+            error,
+          );
+
+          this.ui.show(
+            error?.error?.message ||
+            "Failed to load resources",
+          );
+        },
+      });
+  }
+
+  /**
+   * Triggered when the user changes the resource category
+   * in the create/edit form.
+   */
+  onResourceCategoryChange(): void {
+    this.loadResourcesForCategory(this.form.resourceCategory);
+  }
+
+  // =========================================================
+  // ACTION CATEGORIES
+  // =========================================================
+
+  loadActionCategories(): void {
+
+    this.loadingActionCategories = true;
+
+    this.api
+      .get<any>("/actions/categories")
+      .subscribe({
+
+        next: (response) => {
+
+          this.actionCategories =
+            response?.data ||
+            response ||
+            [];
+
+          this.loadingActionCategories = false;
+        },
+
+        error: (error) => {
+
+          this.loadingActionCategories = false;
+
+          console.error(
+            "Failed to load action categories:",
+            error,
+          );
+
+          this.ui.show(
+            error?.error?.message ||
+            "Failed to load action categories",
+          );
+        },
+      });
+  }
+
+  // =========================================================
+  // ACTIONS FOR A CATEGORY
+  // =========================================================
+
+  loadActionsForCategory(
+    category: string,
+    preserveSelection = false,
+  ): void {
+
+    if (!preserveSelection) {
+      this.form.actions = [];
+    }
+
+    if (!category) {
+      this.actionOptions = [];
+      return;
+    }
+
+    this.loadingActions = true;
+
+    this.api
+      .get<any>(
+        `/actions/category/${category}`,
+      )
+      .subscribe({
+
+        next: (response) => {
+
+          this.actionOptions =
+            response?.data ||
+            response ||
+            [];
+
+          this.loadingActions = false;
+        },
+
+        error: (error) => {
+
+          this.loadingActions = false;
+
+          console.error(
+            "Failed to load actions:",
+            error,
+          );
+
+          this.ui.show(
+            error?.error?.message ||
+            "Failed to load actions",
+          );
+        },
+      });
+  }
+
+  /**
+   * Triggered when the user changes the action category
+   * in the create/edit form.
+   */
+  onActionCategoryChange(): void {
+    this.loadActionsForCategory(this.form.actionCategory);
+  }
+
+  // =========================================================
   // CREATE
   // =========================================================
 
@@ -379,6 +605,9 @@ export class PermissionsComponent implements OnInit {
     this.editMode = false;
 
     this.resetForm();
+
+    this.resourceOptions = [];
+    this.actionOptions = [];
 
     this.formOpen = true;
   }
@@ -404,6 +633,16 @@ export class PermissionsComponent implements OnInit {
 
     this.editMode = true;
 
+    const resourceCategory =
+      permission?.resource_category ||
+      permission?.resourceCategory ||
+      "";
+
+    const actionCategory =
+      permission?.action_category ||
+      permission?.actionCategory ||
+      "";
+
     this.form = {
 
       permissionId,
@@ -413,15 +652,35 @@ export class PermissionsComponent implements OnInit {
         permission?.permissionName ||
         "",
 
-      resource:
-        permission?.resource || "",
+      resourceCategory,
 
-      action:
-        permission?.action || "",
+      resources: [
+        ...(permission?.resources ||
+          permission?.resourceCodes ||
+          []),
+      ],
+
+      actionCategory,
+
+      actions: [
+        ...(permission?.actions ||
+          permission?.actionCodes ||
+          []),
+      ],
 
       description:
         permission?.description || "",
+
+      allowDuplicates:
+        permission?.allow_duplicates ||
+        permission?.allowDuplicates ||
+        false,
     };
+
+    // Load the option lists for the pre-selected categories,
+    // keeping the existing selections intact.
+    this.loadResourcesForCategory(resourceCategory, true);
+    this.loadActionsForCategory(actionCategory, true);
 
     this.formOpen = true;
   }
@@ -460,14 +719,23 @@ export class PermissionsComponent implements OnInit {
       permissionName:
         this.form.permissionName.trim(),
 
-      resource:
-        this.form.resource,
+      resourceCategory:
+        this.form.resourceCategory,
 
-      action:
-        this.form.action,
+      resources:
+        this.form.resources,
+
+      actionCategory:
+        this.form.actionCategory,
+
+      actions:
+        this.form.actions,
 
       description:
         this.form.description.trim(),
+
+      allowDuplicates:
+        this.form.allowDuplicates,
     };
 
     // =======================================================
@@ -710,19 +978,37 @@ export class PermissionsComponent implements OnInit {
       return false;
     }
 
-    if (!this.form.resource) {
+    if (!this.form.resourceCategory) {
 
       this.ui.show(
-        "Resource is required",
+        "Resource category is required",
       );
 
       return false;
     }
 
-    if (!this.form.action) {
+    if (!this.form.resources.length) {
 
       this.ui.show(
-        "Action is required",
+        "At least one resource is required",
+      );
+
+      return false;
+    }
+
+    if (!this.form.actionCategory) {
+
+      this.ui.show(
+        "Action category is required",
+      );
+
+      return false;
+    }
+
+    if (!this.form.actions.length) {
+
+      this.ui.show(
+        "At least one action is required",
       );
 
       return false;
@@ -743,12 +1029,103 @@ export class PermissionsComponent implements OnInit {
 
       permissionName: "",
 
-      resource: "",
+      resourceCategory: "",
+      resources: [],
 
-      action: "",
+      actionCategory: "",
+      actions: [],
 
       description: "",
+
+      allowDuplicates: false,
     };
+  }
+
+  // =========================================================
+  // LABEL FORMATTING
+  //
+  // ASSIGN_ROLE -> Assign Role
+  // HEALTHCARE_NOTIFICATION -> Healthcare Notification
+  // =========================================================
+
+  formatLabel(value: string | null | undefined): string {
+
+    if (!value) {
+      return "—";
+    }
+
+    return value
+      .toLowerCase()
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+
+  /**
+   * Resolve a resource code to its display name, falling back
+   * to a formatted version of the code when the option list
+   * (e.g. on the details view) isn't loaded.
+   */
+  resourceLabel(code: string): string {
+
+    const match = this.resourceOptions.find(
+      (option) => option.resourceCode === code,
+    );
+
+    return match?.resourceName || this.formatLabel(code);
+  }
+
+  /**
+   * Resolve an action code to its display name, falling back
+   * to a formatted version of the code when the option list
+   * (e.g. on the details view) isn't loaded.
+   */
+  actionLabel(code: string): string {
+
+    const match = this.actionOptions.find(
+      (option) => option.actionCode === code,
+    );
+
+    return match?.actionName || this.formatLabel(code);
+  }
+
+  /**
+   * Comma-separated resource labels for a permission row,
+   * used on the details view.
+   */
+  resourceLabels(permission: any): string {
+
+    const codes: string[] =
+      permission?.resources ||
+      permission?.resourceCodes ||
+      [];
+
+    if (!codes.length) {
+      return "—";
+    }
+
+    return codes
+      .map((code) => this.formatLabel(code))
+      .join(", ");
+  }
+
+  /**
+   * Comma-separated action labels for a permission row,
+   * used on the details view.
+   */
+  actionLabels(permission: any): string {
+
+    const codes: string[] =
+      permission?.actions ||
+      permission?.actionCodes ||
+      [];
+
+    if (!codes.length) {
+      return "—";
+    }
+
+    return codes
+      .map((code) => this.formatLabel(code))
+      .join(", ");
   }
 
   // =========================================================
