@@ -44,6 +44,22 @@ select:disabled {
   cursor: not-allowed;
 }
 
+select.view-select {
+  background: #f8fafc;
+
+  border-color: #eef2f7;
+
+  color: #1f2937;
+
+  font-size: 14px;
+
+  font-weight: 600;
+
+  opacity: 1;
+
+  cursor: default;
+}
+
 
 /* =========================================================
    MULTI-SELECT (Resource / Action)
@@ -75,6 +91,12 @@ select.multi-select option:checked {
   font-size: 11px;
 }
 
+.readonly-input {
+  background-color: #e9ecef !important;
+  color: #495057 !important;
+  border: 1px solid #ced4da !important;
+  cursor: not-allowed !important;
+}
 
 /* =========================================================
    BUTTONS

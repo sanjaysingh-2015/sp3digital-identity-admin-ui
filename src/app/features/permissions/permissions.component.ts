@@ -74,10 +74,12 @@ export class PermissionsComponent implements OnInit {
     permissionName: "",
 
     resourceCategory: "",
-    resources: [] as string[],
+    resources: [] as string[],   // create mode (multi-select)
+    resource: "",                 // edit mode (single-select)
 
     actionCategory: "",
-    actions: [] as string[],
+    actions: [] as string[],      // create mode (multi-select)
+    action: "",                   // edit mode (single-select)
 
     description: "",
 
@@ -112,7 +114,7 @@ export class PermissionsComponent implements OnInit {
 
   columnDefs: ColDef[] = [
     {
-      headerName: "Permission Group",
+      headerName: "Permission",
       field: "permission_name",
       flex: 1.5,
       minWidth: 220,
@@ -401,23 +403,17 @@ export class PermissionsComponent implements OnInit {
   // =========================================================
 
   loadResourceCategories(): void {
-
     this.loadingResourceCategories = true;
-
     this.api
       .get<any>("/resources/categories")
       .subscribe({
-
         next: (response) => {
-
           this.resourceCategories =
             response?.data ||
             response ||
             [];
-
           this.loadingResourceCategories = false;
         },
-
         error: (error) => {
 
           this.loadingResourceCategories = false;
@@ -439,14 +435,7 @@ export class PermissionsComponent implements OnInit {
   // RESOURCES FOR A CATEGORY
   // =========================================================
 
-  loadResourcesForCategory(
-    category: string,
-    preserveSelection = false,
-  ): void {
-
-    if (!preserveSelection) {
-      this.form.resources = [];
-    }
+  loadResourcesForCategory(category: string): void {
 
     if (!category) {
       this.resourceOptions = [];
@@ -490,9 +479,18 @@ export class PermissionsComponent implements OnInit {
 
   /**
    * Triggered when the user changes the resource category
-   * in the create/edit form.
+   * in the create/edit form. Resets whichever selection field
+   * applies to the current mode (multi-select for create,
+   * single-select for edit).
    */
   onResourceCategoryChange(): void {
+
+    if (this.editMode) {
+      this.form.resource = "";
+    } else {
+      this.form.resources = [];
+    }
+
     this.loadResourcesForCategory(this.form.resourceCategory);
   }
 
@@ -539,14 +537,7 @@ export class PermissionsComponent implements OnInit {
   // ACTIONS FOR A CATEGORY
   // =========================================================
 
-  loadActionsForCategory(
-    category: string,
-    preserveSelection = false,
-  ): void {
-
-    if (!preserveSelection) {
-      this.form.actions = [];
-    }
+  loadActionsForCategory(category: string): void {
 
     if (!category) {
       this.actionOptions = [];
@@ -590,9 +581,18 @@ export class PermissionsComponent implements OnInit {
 
   /**
    * Triggered when the user changes the action category
-   * in the create/edit form.
+   * in the create/edit form. Resets whichever selection field
+   * applies to the current mode (multi-select for create,
+   * single-select for edit).
    */
   onActionCategoryChange(): void {
+
+    if (this.editMode) {
+      this.form.action = "";
+    } else {
+      this.form.actions = [];
+    }
+
     this.loadActionsForCategory(this.form.actionCategory);
   }
 
@@ -653,20 +653,22 @@ export class PermissionsComponent implements OnInit {
         "",
 
       resourceCategory,
+      resources: [],
 
-      resources: [
-        ...(permission?.resources ||
-          permission?.resourceCodes ||
-          []),
-      ],
+      resource:
+        permission?.resource ||
+        permission?.resourceCode ||
+        (permission?.resources || [])[0] ||
+        "",
 
       actionCategory,
+      actions: [],
 
-      actions: [
-        ...(permission?.actions ||
-          permission?.actionCodes ||
-          []),
-      ],
+      action:
+        permission?.action ||
+        permission?.actionCode ||
+        (permission?.actions || [])[0] ||
+        "",
 
       description:
         permission?.description || "",
@@ -677,10 +679,11 @@ export class PermissionsComponent implements OnInit {
         false,
     };
 
-    // Load the option lists for the pre-selected categories,
-    // keeping the existing selections intact.
-    this.loadResourcesForCategory(resourceCategory, true);
-    this.loadActionsForCategory(actionCategory, true);
+    // Load the option lists for the pre-selected categories.
+    // The single-select fields above already hold the existing
+    // value, so it will show as selected once options arrive.
+    this.loadResourcesForCategory(resourceCategory);
+    this.loadActionsForCategory(actionCategory);
 
     this.formOpen = true;
   }
@@ -714,71 +717,58 @@ export class PermissionsComponent implements OnInit {
 
     this.saving = true;
 
-    const request = {
-
+    const request: any = {
       permissionName:
         this.form.permissionName.trim(),
-
       resourceCategory:
         this.form.resourceCategory,
-
-      resources:
-        this.form.resources,
-
       actionCategory:
         this.form.actionCategory,
-
-      actions:
-        this.form.actions,
-
       description:
         this.form.description.trim(),
-
       allowDuplicates:
         this.form.allowDuplicates,
     };
+
+    // Edit mode: a row is a single resource/action pair.
+    // Create mode: multiple resources/actions can be selected
+    // to bulk-create one permission per combination.
+    if (this.editMode) {
+      request.resource = this.form.resource;
+      request.action = this.form.action;
+    } else {
+      request.resources = this.form.resources;
+      request.actions = this.form.actions;
+    }
 
     // =======================================================
     // UPDATE
     // =======================================================
 
     if (this.editMode) {
-
       const permissionId =
         this.form.permissionId;
-
       if (!permissionId) {
-
         this.saving = false;
-
         this.ui.show(
           "Invalid permission ID",
         );
-
         return;
       }
-
       this.api
         .patch<any>(
           `/authorization/permissions/${permissionId}`,
           request,
         )
         .subscribe({
-
           next: () => {
-
             this.saving = false;
-
             this.formOpen = false;
-
             this.editMode = false;
-
             this.resetForm();
-
             this.ui.show(
               "Permission updated successfully",
             );
-
             this.load();
           },
 
@@ -928,25 +918,19 @@ export class PermissionsComponent implements OnInit {
         `/authorization/permissions/${permissionId}`,
       )
       .subscribe({
-
         next: (response) => {
-
           this.selected =
             response?.data ||
             response;
-
           this.loading = false;
         },
 
         error: (error) => {
-
           this.loading = false;
-
           console.error(
             "Failed to load permission:",
             error,
           );
-
           this.ui.show(
             error?.error?.message ||
             "Failed to load permission details",
@@ -987,7 +971,18 @@ export class PermissionsComponent implements OnInit {
       return false;
     }
 
-    if (!this.form.resources.length) {
+    if (this.editMode) {
+
+      if (!this.form.resource) {
+
+        this.ui.show(
+          "Resource is required",
+        );
+
+        return false;
+      }
+
+    } else if (!this.form.resources.length) {
 
       this.ui.show(
         "At least one resource is required",
@@ -1005,7 +1000,18 @@ export class PermissionsComponent implements OnInit {
       return false;
     }
 
-    if (!this.form.actions.length) {
+    if (this.editMode) {
+
+      if (!this.form.action) {
+
+        this.ui.show(
+          "Action is required",
+        );
+
+        return false;
+      }
+
+    } else if (!this.form.actions.length) {
 
       this.ui.show(
         "At least one action is required",
@@ -1026,14 +1032,15 @@ export class PermissionsComponent implements OnInit {
     this.form = {
 
       permissionId: null,
-
       permissionName: "",
 
       resourceCategory: "",
       resources: [],
+      resource: "",
 
       actionCategory: "",
       actions: [],
+      action: "",
 
       description: "",
 
@@ -1089,43 +1096,41 @@ export class PermissionsComponent implements OnInit {
   }
 
   /**
-   * Comma-separated resource labels for a permission row,
-   * used on the details view.
+   * Display label for a permission row's single resource,
+   * used on the details view. Falls back to the first entry
+   * of a legacy resources[] array if present.
    */
-  resourceLabels(permission: any): string {
+  resourceDisplayLabel(permission: any): string {
 
-    const codes: string[] =
-      permission?.resources ||
-      permission?.resourceCodes ||
-      [];
+    const code =
+      permission?.resource ||
+      permission?.resourceCode ||
+      (permission?.resources || [])[0];
 
-    if (!codes.length) {
+    if (!code) {
       return "—";
     }
 
-    return codes
-      .map((code) => this.formatLabel(code))
-      .join(", ");
+    return this.resourceLabel(code);
   }
 
   /**
-   * Comma-separated action labels for a permission row,
-   * used on the details view.
+   * Display label for a permission row's single action,
+   * used on the details view. Falls back to the first entry
+   * of a legacy actions[] array if present.
    */
-  actionLabels(permission: any): string {
+  actionDisplayLabel(permission: any): string {
 
-    const codes: string[] =
-      permission?.actions ||
-      permission?.actionCodes ||
-      [];
+    const code =
+      permission?.action ||
+      permission?.actionCode ||
+      (permission?.actions || [])[0];
 
-    if (!codes.length) {
+    if (!code) {
       return "—";
     }
 
-    return codes
-      .map((code) => this.formatLabel(code))
-      .join(", ");
+    return this.actionLabel(code);
   }
 
   // =========================================================

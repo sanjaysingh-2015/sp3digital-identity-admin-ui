@@ -144,6 +144,13 @@ select {
   font-size: inherit;
 }
 
+.readonly-input {
+  background-color: #e9ecef;
+  color: #495057;
+  border: 1px solid #ced4da;
+  cursor: default;
+}
+
 button {
   cursor: pointer;
 }
