@@ -1,62 +1,110 @@
-import { Component } from "@angular/core";
+import { Component, OnInit } from "@angular/core";
+import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
+
 import { AgGridAngular } from "ag-grid-angular";
 import {
   ColDef,
   GridApi,
   GridReadyEvent,
-  CellClickedEvent,
+  ICellRendererParams,
+  ModuleRegistry,
+  AllCommunityModule,
 } from "ag-grid-community";
 
 import { ApiService } from "../../core/api.service";
 import { UiService } from "../../core/ui.service";
 import { PageComponent } from "../../shared/page.component";
 
+// Register AG Grid community modules
+ModuleRegistry.registerModules([AllCommunityModule]);
+
 @Component({
   selector: "app-permissions",
   standalone: true,
-  imports: [FormsModule, PageComponent, AgGridAngular],
+  imports: [
+    CommonModule,
+    FormsModule,
+    PageComponent,
+    AgGridAngular,
+  ],
   templateUrl: "./permissions.component.html",
-  styleUrl: "./permissions.component.scss",
+  styleUrls: ["./permissions.component.scss"],
 })
-export class PermissionsComponent {
+export class PermissionsComponent implements OnInit {
+
+  // =========================================================
+  // DATA
+  // =========================================================
+
   rows: any[] = [];
+
   loading = false;
   saving = false;
   deleting = false;
+
+  selected: any = null;
+
+  // =========================================================
+  // CREATE / EDIT
+  // =========================================================
+
   formOpen = false;
   editMode = false;
-  selected: any = null;
-  private gridApi!: GridApi;
-
-  /**
-   * Static Role Types
-   */
-  readonly permissionTypes: string[] = ["SYSTEM", "TENANT", "ORGANIZATION"];
 
   form = {
+    permissionId: null as number | string | null,
+
     permissionName: "",
     resource: "",
     action: "",
     description: "",
   };
 
-  /**
-   * AG Grid column definitions
-   */
+  // =========================================================
+  // STATIC RESOURCES / ACTIONS
+  // =========================================================
+
+  readonly resources: string[] = [
+    "USER",
+    "ROLE",
+    "PERMISSION",
+    "TENANT",
+    "ORGANIZATION",
+  ];
+
+  readonly actions: string[] = [
+    "CREATE",
+    "READ",
+    "UPDATE",
+    "DELETE",
+    "MANAGE",
+  ];
+
+  // =========================================================
+  // AG GRID
+  // =========================================================
+
+  private gridApi!: GridApi;
+
   columnDefs: ColDef[] = [
     {
       headerName: "Permission",
       field: "permission_name",
-      flex: 1.2,
-      minWidth: 180,
+      flex: 1.5,
+      minWidth: 220,
       sortable: true,
       filter: true,
-      cellRenderer: (params: any) => {
-        const permissionName = params.data?.permission_name || params.data?.permissionName || "—";
+      cellRenderer: (params: ICellRendererParams) => {
+        const permission = params.data;
+
+        const permissionName =
+          permission?.permission_name ||
+          permission?.permissionName ||
+          "—";
 
         return `
-          <div class="permission-cell">
+          <div class="ag-permission-cell">
             <strong>${this.escapeHtml(permissionName)}</strong>
           </div>
         `;
@@ -65,71 +113,60 @@ export class PermissionsComponent {
 
     {
       headerName: "Resource",
-      field: "resource",
-      width: 150,
+      flex: 0.8,
+      minWidth: 140,
       sortable: true,
       filter: true,
-      cellRenderer: (params: any) => {
-        const resource = params.data?.resource || params.data?.resource;
-
-        return `
-          <span class="permission-type">
-            ${this.escapeHtml(resource)}
-          </span>
-        `;
-      },
+      valueGetter: (params) =>
+        params.data?.resource || "—",
     },
 
     {
       headerName: "Action",
-      field: "action",
-      width: 150,
+      flex: 0.8,
+      minWidth: 140,
       sortable: true,
       filter: true,
-      cellRenderer: (params: any) => {
-        const action = params.data?.action || params.data?.action;
-
-        return `
-          <span class="permission-type">
-            ${this.escapeHtml(action)}
-          </span>
-        `;
-      },
+      valueGetter: (params) =>
+        params.data?.action || "—",
     },
 
     {
       headerName: "Description",
       field: "description",
-      flex: 1.5,
+      flex: 1.6,
       minWidth: 220,
       sortable: true,
       filter: true,
-      cellRenderer: (params: any) => {
-        return this.escapeHtml(params.value || "—");
-      },
+      valueFormatter: (params) => params.value || "—",
     },
 
     {
       headerName: "Status",
       field: "status",
-      width: 130,
+      flex: 0.8,
+      minWidth: 120,
       sortable: true,
       filter: true,
-      cellRenderer: (params: any) => {
+
+      cellRenderer: (params: ICellRendererParams) => {
         const status = params.value || "—";
 
-        let cssClass = "badge";
+        let className = "ag-status-badge";
 
         if (status === "ACTIVE") {
-          cssClass += " good";
+          className += " good";
         } else if (status === "SUSPENDED") {
-          cssClass += " warning";
-        } else if (status === "INACTIVE" || status === "DELETED") {
-          cssClass += " danger";
+          className += " warning";
+        } else if (
+          status === "INACTIVE" ||
+          status === "DELETED"
+        ) {
+          className += " danger";
         }
 
         return `
-          <span class="${cssClass}">
+          <span class="${className}">
             ${this.escapeHtml(status)}
           </span>
         `;
@@ -138,20 +175,34 @@ export class PermissionsComponent {
 
     {
       headerName: "Actions",
-      width: 190,
+      flex: 1.3,
       minWidth: 190,
       sortable: false,
       filter: false,
-      cellRenderer: (params: any) => {
-        const isDeleted = params.data?.status === "DELETED";
+
+      cellRenderer: (params: ICellRendererParams) => {
+
+        const permission = params.data;
+
+        const permissionId =
+          permission?.permission_id ||
+          permission?.permissionId;
+
+        if (!permissionId) {
+          return "";
+        }
+
+        const isDeleted =
+          permission?.status === "DELETED";
 
         if (isDeleted) {
           return `
-            <div class="grid-actions">
+            <div class="ag-table-actions">
               <button
                 type="button"
-                class="grid-action view"
-                data-action="view">
+                class="ag-action-btn view"
+                data-action="view"
+              >
                 View
               </button>
             </div>
@@ -159,29 +210,66 @@ export class PermissionsComponent {
         }
 
         return `
-          <div class="grid-actions">
+          <div class="ag-table-actions">
+
             <button
               type="button"
-              class="grid-action view"
-              data-action="view">
+              class="ag-action-btn view"
+              data-action="view"
+            >
               View
             </button>
 
             <button
               type="button"
-              class="grid-action edit"
-              data-action="edit">
+              class="ag-action-btn edit"
+              data-action="edit"
+            >
               Edit
             </button>
 
             <button
               type="button"
-              class="grid-action delete"
-              data-action="delete">
+              class="ag-action-btn delete"
+              data-action="delete"
+            >
               Delete
             </button>
+
           </div>
         `;
+      },
+
+      onCellClicked: (params) => {
+
+        const target =
+          params.event?.target as HTMLElement;
+
+        if (!target) {
+          return;
+        }
+
+        const action =
+          target.getAttribute("data-action");
+
+        if (!action) {
+          return;
+        }
+
+        switch (action) {
+
+          case "view":
+            this.select(params.data);
+            break;
+
+          case "edit":
+            this.openEdit(params.data);
+            break;
+
+          case "delete":
+            this.deletePermission(params.data);
+            break;
+        }
       },
     },
   ];
@@ -199,40 +287,65 @@ export class PermissionsComponent {
     animateRows: true,
   };
 
+  // =========================================================
+  // CONSTRUCTOR
+  // =========================================================
+
   constructor(
     private api: ApiService,
     private ui: UiService,
-  ) {
+  ) {}
+
+  // =========================================================
+  // INIT
+  // =========================================================
+
+  ngOnInit(): void {
     this.load();
   }
 
-  /**
-   * Grid ready
-   */
+  // =========================================================
+  // GRID READY
+  // =========================================================
+
   onGridReady(event: GridReadyEvent): void {
     this.gridApi = event.api;
+
     this.gridApi.sizeColumnsToFit();
   }
 
-  /**
-   * Load permissions from API
-   */
+  // =========================================================
+  // LOAD PERMISSIONS
+  // =========================================================
+
   load(): void {
+
     this.loading = true;
+
     this.api
       .get<any>("/authorization/permissions", {
         page: 1,
         limit: 100,
       })
       .subscribe({
+
         next: (response) => {
+
           this.rows =
-            response?.data?.items || response?.items || response?.data || [];
-console.log("Rows ===> ", this.rows);
+            response?.data?.items ||
+            response?.items ||
+            response?.data ||
+            response?.rows ||
+            [];
+
           this.loading = false;
 
+          // Refresh AG Grid
           if (this.gridApi) {
-            this.gridApi.setGridOption("rowData", this.rows);
+            this.gridApi.setGridOption(
+              "rowData",
+              this.rows,
+            );
 
             setTimeout(() => {
               this.gridApi.sizeColumnsToFit();
@@ -241,277 +354,409 @@ console.log("Rows ===> ", this.rows);
         },
 
         error: (error) => {
-          console.error("Failed to load permissions", error);
+
           this.loading = false;
-          this.ui.show(error?.error?.message || "Failed to load permissions");
+
+          console.error(
+            "Failed to load permissions:",
+            error,
+          );
+
+          this.ui.show(
+            error?.error?.message ||
+            "Failed to load permissions",
+          );
         },
       });
   }
 
-  /**
-   * Open create modal
-   */
+  // =========================================================
+  // CREATE
+  // =========================================================
+
   openCreate(): void {
-    this.form = {
-      permissionName: "",
-      resource: "",
-      action: "",
-      description: "",
-    };
 
     this.editMode = false;
+
+    this.resetForm();
+
     this.formOpen = true;
   }
 
-  /**
-   * Open edit modal
-   */
+  // =========================================================
+  // EDIT
+  // =========================================================
+
   openEdit(permission: any): void {
+
+    const permissionId =
+      permission?.permission_id ||
+      permission?.permissionId;
+
+    if (!permissionId) {
+
+      this.ui.show(
+        "Invalid permission ID",
+      );
+
+      return;
+    }
+
+    this.editMode = true;
+
     this.form = {
-      permissionName: permission.permission_name || permission.permissionName || "",
-      resource: permission.resource || permission.resource || "",
-      action: permission.action || permission.action || "",
-      description: permission.description || "",
+
+      permissionId,
+
+      permissionName:
+        permission?.permission_name ||
+        permission?.permissionName ||
+        "",
+
+      resource:
+        permission?.resource || "",
+
+      action:
+        permission?.action || "",
+
+      description:
+        permission?.description || "",
     };
 
-    this.selected = permission;
-    this.editMode = true;
     this.formOpen = true;
   }
 
-  /**
-   * Close create/edit modal
-   */
+  // =========================================================
+  // CLOSE CREATE / EDIT
+  // =========================================================
+
   closeCreate(): void {
+
+    if (this.saving) {
+      return;
+    }
+
     this.formOpen = false;
+
     this.editMode = false;
-    this.selected = null;
 
     this.resetForm();
   }
 
-  /**
-   * Reset form
-   */
-  private resetForm(): void {
-    this.form = {
-      permissionName: "",
-      resource: "",
-      action: "",
-      description: "",
-    };
-  }
+  // =========================================================
+  // SAVE
+  // =========================================================
 
-  /**
-   * Create or update permission
-   */
   save(): void {
-    if (!this.form.permissionName.trim()) {
-      this.ui.show("Permission name is required");
-      return;
-    }
 
-    if (!this.form.resource) {
-      this.ui.show("Resource is required");
+    if (!this.validateForm()) {
       return;
     }
-
-    if (!this.form.action) {
-      this.ui.show("Action is required");
-      return;
-    }
-    const request = {
-      permissionName: this.form.permissionName.trim(),
-      resource: this.form.resource,
-      action: this.form.action,
-      description: this.form.description.trim(),
-    };
 
     this.saving = true;
 
+    const request = {
+
+      permissionName:
+        this.form.permissionName.trim(),
+
+      resource:
+        this.form.resource,
+
+      action:
+        this.form.action,
+
+      description:
+        this.form.description.trim(),
+    };
+
+    // =======================================================
+    // UPDATE
+    // =======================================================
+
     if (this.editMode) {
-      this.updateRole(request);
-    } else {
-      this.createRole(request);
+
+      const permissionId =
+        this.form.permissionId;
+
+      if (!permissionId) {
+
+        this.saving = false;
+
+        this.ui.show(
+          "Invalid permission ID",
+        );
+
+        return;
+      }
+
+      this.api
+        .patch<any>(
+          `/authorization/permissions/${permissionId}`,
+          request,
+        )
+        .subscribe({
+
+          next: () => {
+
+            this.saving = false;
+
+            this.formOpen = false;
+
+            this.editMode = false;
+
+            this.resetForm();
+
+            this.ui.show(
+              "Permission updated successfully",
+            );
+
+            this.load();
+          },
+
+          error: (error) => {
+
+            this.saving = false;
+
+            console.error(
+              "Failed to update permission:",
+              error,
+            );
+
+            this.ui.show(
+              error?.error?.message ||
+              "Failed to update permission",
+            );
+          },
+        });
+
+      return;
     }
+
+    // =======================================================
+    // CREATE
+    // =======================================================
+
+    this.api
+      .post<any>(
+        "/authorization/permissions",
+        request,
+      )
+      .subscribe({
+
+        next: () => {
+
+          this.saving = false;
+
+          this.formOpen = false;
+
+          this.resetForm();
+
+          this.ui.show(
+            "Permission created successfully",
+          );
+
+          this.load();
+        },
+
+        error: (error) => {
+
+          this.saving = false;
+
+          console.error(
+            "Failed to create permission:",
+            error,
+          );
+
+          this.ui.show(
+            error?.error?.message ||
+            "Failed to create permission",
+          );
+        },
+      });
   }
 
-  /**
-   * Create permission
-   */
-  private createRole(request: any): void {
-    this.api.post("/authorization/permissions", request).subscribe({
-      next: () => {
-        this.saving = false;
-        this.closeCreate();
-        this.ui.show("Role created");
-        this.load();
-      },
+  // =========================================================
+  // SOFT DELETE
+  // =========================================================
 
-      error: (error) => {
-        console.error("Failed to create permission", error);
-        this.saving = false;
-        this.ui.show(error?.error?.message || "Failed to create permission");
-      },
-    });
-  }
-
-  /**
-   * Update permission
-   */
-  private updateRole(request: any): void {
-    const permissionId = this.selected?.permission_id || this.selected?.permissionId;
+  deletePermission(permission: any): void {
+    const permissionId =
+      permission?.permission_id ||
+      permission?.permissionId;
     if (!permissionId) {
-      this.saving = false;
-      this.ui.show("Permission Id is missing");
+      this.ui.show(
+        "Invalid permission ID",
+      );
       return;
     }
-
-    this.api.patch(`/authorization/permissions/${permissionId}`, request).subscribe({
-      next: () => {
-        this.saving = false;
-        this.closeCreate();
-        this.ui.show("Role updated");
-        this.load();
-      },
-
-      error: (error) => {
-        console.error("Failed to update permission", error);
-        this.saving = false;
-        this.ui.show(error?.error?.message || "Failed to update permission");
-      },
-    });
-  }
-
-  /**
-   * Handle AG Grid action buttons
-   */
-  onCellClicked(event: CellClickedEvent): void {
-    if (event.colDef.headerName !== "Actions") {
-      return;
-    }
-    const target = event.event?.target as HTMLElement;
-    const button = target?.closest("button") as HTMLButtonElement | null;
-    if (!button) {
-      return;
-    }
-
-    const action = button.dataset["action"];
-    const permission = event.data;
-    if (action === "view") {
-      this.select(permission);
-    }
-
-    if (action === "edit") {
-      this.openEdit(permission);
-    }
-
-    if (action === "delete") {
-      this.deleteRole(permission);
-    }
-  }
-
-  /**
-   * View permission
-   */
-  select(permission: any): void {
-    const permissionId = permission?.permission_id || permission?.permissionId;
-
-    if (!permissionId) {
-      this.selected = permission;
-      return;
-    }
-
-    this.api.get<any>(`/authorization/permissions/${permissionId}`).subscribe({
-      next: (response) => {
-        this.selected = response?.data || response;
-      },
-
-      error: (error) => {
-        console.error("Failed to load permission", error);
-
-        this.ui.show(error?.error?.message || "Failed to load permission");
-      },
-    });
-  }
-
-  /**
-   * Close details
-   */
-  closeDetails(): void {
-    this.selected = null;
-  }
-
-  /**
-   * Soft delete permission
-   *
-   * Status is changed to DELETED.
-   */
-  deleteRole(permission: any): void {
-    const permissionId = permission?.permission_id || permission?.permissionId;
-
-    if (!permissionId) {
-      this.ui.show("Role ID is missing");
-
-      return;
-    }
-
-    const permissionName = permission?.permission_name || permission?.permissionName || "this permission";
-
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${permissionName}"?`,
-    );
+    const permissionName =
+      permission?.permission_name ||
+      permission?.permissionName ||
+      "this permission";
+    const confirmed =
+      window.confirm(
+        `Are you sure you want to delete permission "${permissionName}"?\n\n` +
+        `The permission will be marked as DELETED and will not be physically removed.`,
+      );
 
     if (!confirmed) {
       return;
     }
 
     this.deleting = true;
-
     this.api
-      .patch(`/authorization/permissions/${permissionId}/status`, {
-        status: "DELETED",
-      })
+      .patch<any>(
+        `/authorization/permissions/${permissionId}/status`,
+        {
+          status: "DELETED",
+        },
+      )
       .subscribe({
         next: () => {
           this.deleting = false;
-
-          this.ui.show("Role deleted");
-
+          this.ui.show(
+            "Permission deleted successfully",
+          );
           this.load();
         },
-
         error: (error) => {
-          console.error("Failed to delete permission", error);
-
           this.deleting = false;
-
-          this.ui.show(error?.error?.message || "Failed to delete permission");
+          console.error(
+            "Failed to delete permission:",
+            error,
+          );
+          this.ui.show(
+            error?.error?.message ||
+            "Failed to delete permission",
+          );
         },
       });
   }
 
-  /**
-   * Convert:
-   * SYSTEM -> System
-   * TENANT -> Tenant
-   * ORGANIZATION -> Organization
-   */
-  formatRoleType(permissionType: string | null | undefined): string {
-    if (!permissionType) {
-      return "—";
+  // =========================================================
+  // VIEW
+  // =========================================================
+
+  select(permission: any): void {
+
+    const permissionId =
+      permission?.permission_id ||
+      permission?.permissionId;
+
+    if (!permissionId) {
+
+      this.ui.show(
+        "Invalid permission ID",
+      );
+
+      return;
     }
 
-    return permissionType
-      .toLowerCase()
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (char) => char.toUpperCase());
+    this.loading = true;
+
+    this.api
+      .get<any>(
+        `/authorization/permissions/${permissionId}`,
+      )
+      .subscribe({
+
+        next: (response) => {
+
+          this.selected =
+            response?.data ||
+            response;
+
+          this.loading = false;
+        },
+
+        error: (error) => {
+
+          this.loading = false;
+
+          console.error(
+            "Failed to load permission:",
+            error,
+          );
+
+          this.ui.show(
+            error?.error?.message ||
+            "Failed to load permission details",
+          );
+        },
+      });
   }
 
-  /**
-   * Prevent HTML injection in cellRenderer.
-   */
+  // =========================================================
+  // CLOSE DETAILS
+  // =========================================================
+
+  closeDetails(): void {
+    this.selected = null;
+  }
+
+  // =========================================================
+  // VALIDATION
+  // =========================================================
+
+  validateForm(): boolean {
+
+    if (!this.form.permissionName.trim()) {
+
+      this.ui.show(
+        "Permission name is required",
+      );
+
+      return false;
+    }
+
+    if (!this.form.resource) {
+
+      this.ui.show(
+        "Resource is required",
+      );
+
+      return false;
+    }
+
+    if (!this.form.action) {
+
+      this.ui.show(
+        "Action is required",
+      );
+
+      return false;
+    }
+
+    return true;
+  }
+
+  // =========================================================
+  // RESET FORM
+  // =========================================================
+
+  resetForm(): void {
+
+    this.form = {
+
+      permissionId: null,
+
+      permissionName: "",
+
+      resource: "",
+
+      action: "",
+
+      description: "",
+    };
+  }
+
+  // =========================================================
+  // HTML ESCAPING FOR CELL RENDERERS
+  // =========================================================
+
   private escapeHtml(value: any): string {
+
     if (value === null || value === undefined) {
       return "";
     }

@@ -13,52 +13,36 @@
   </button>
 </app-page>
 
-
 <!-- =========================================================
-     ROLE GRID
+     AG GRID
 ========================================================= -->
-<div class="panel permission-grid-panel">
-
+<div class="panel grid-panel">
   <ag-grid-angular
-    class="ag-theme-quartz permission-grid"
+    class="permissions-grid"
     [rowData]="rows"
     [columnDefs]="columnDefs"
     [defaultColDef]="defaultColDef"
-    [animateRows]="true"
-    [pagination]="true"
-    [paginationPageSize]="20"
-    [paginationPageSizeSelector]="[10, 20, 50, 100]"
-    [suppressCellFocus]="true"
+    [gridOptions]="gridOptions"
     (gridReady)="onGridReady($event)"
-    (cellClicked)="onCellClicked($event)"
   >
   </ag-grid-angular>
-
 </div>
 
-
 <!-- =========================================================
-     CREATE / EDIT ROLE MODAL
+     CREATE / EDIT PERMISSION MODAL
 ========================================================= -->
 
 @if (formOpen) {
-
   <div
     class="modal-backdrop"
     (click)="closeCreate()"
   >
-
     <div
       class="modal permission-form-modal"
       (click)="$event.stopPropagation()"
     >
-
-      <!-- Header -->
-
       <div class="modal-header">
-
         <div>
-
           <h3>
             @if (editMode) {
               Edit permission
@@ -66,7 +50,6 @@
               Create permission
             }
           </h3>
-
           <p>
             @if (editMode) {
               Update the RBAC permission information.
@@ -75,7 +58,6 @@
             }
           </p>
         </div>
-
         <button
           type="button"
           class="modal-close"
@@ -86,14 +68,15 @@
         </button>
       </div>
 
-      <!-- Form -->
+      <!-- ===================================================
+           PERMISSION FORM
+      ==================================================== -->
       <div class="form-grid">
         <!-- Permission Name -->
         <label>
           <span>
             Permission name <b>*</b>
           </span>
-
           <input
             type="text"
             [(ngModel)]="form.permissionName"
@@ -106,48 +89,38 @@
           <span>
             Resource <b>*</b>
           </span>
-
           <select
             [(ngModel)]="form.resource"
           >
-
             @for (
               resource of resources;
               track resource
             ) {
-              <option
-                [value]="resource"
-              >
+              <option [value]="resource">
                 {{ resource }}
               </option>
             }
           </select>
         </label>
-        <!-- Actions -->
-         <label>
+        <!-- Action -->
+        <label>
           <span>
             Action <b>*</b>
           </span>
-
           <select
-            [(ngModel)]="form.resource"
+            [(ngModel)]="form.action"
           >
-
             @for (
               action of actions;
               track action
             ) {
-              <option
-                [value]="action"
-              >
+              <option [value]="action">
                 {{ action }}
               </option>
             }
           </select>
         </label>
-
         <!-- Description -->
-
         <label class="full-width">
           <span>
             Description
@@ -160,7 +133,6 @@
         </label>
       </div>
       <!-- Actions -->
-
       <div class="modal-actions">
         <button
           type="button"
@@ -195,37 +167,27 @@
   </div>
 }
 
-
 <!-- =========================================================
-     ROLE DETAILS MODAL
+     PERMISSION DETAILS MODAL
 ========================================================= -->
-
-@if (selected && !formOpen) {
-
+@if (selected) {
   <div
     class="modal-backdrop"
     (click)="closeDetails()"
   >
-
     <div
       class="modal details-modal"
       (click)="$event.stopPropagation()"
     >
-
       <div class="modal-header">
-
         <div>
-
           <h3>
             Permission details
           </h3>
-
           <p>
             RBAC permission information.
           </p>
-
         </div>
-
         <button
           type="button"
           class="modal-close"
@@ -234,20 +196,12 @@
         >
           ×
         </button>
-
       </div>
 
-
       <!-- Permission summary -->
-
       <div class="permission-summary">
-
         <div class="summary-item">
-
-          <span>
-            Permission name
-          </span>
-
+          <span>Permission Name</span>
           <strong>
             {{
               selected.permission_name ||
@@ -255,50 +209,29 @@
               "—"
             }}
           </strong>
-
         </div>
-
-
         <div class="summary-item">
-
-          <span>
-            Permission type
-          </span>
-
+          <span>Resource</span>
           <strong>
-            {{
-              formatPermissionType(
-                selected.permission_type ||
-                selected.permissionType
-              )
-            }}
+            {{ selected.resource || "—" }}
           </strong>
-
         </div>
-
-
         <div class="summary-item">
-
-          <span>
-            Description
-          </span>
-
+          <span>Action</span>
           <strong>
-            {{
-              selected.description ||
-              "—"
-            }}
+            {{ selected.action || "—" }}
           </strong>
-
         </div>
-
-
         <div class="summary-item">
-
+          <span>Description</span>
+          <strong>
+            {{ selected.description || "—" }}
+          </strong>
+        </div>
+        <div class="summary-item">
           <span>
             Status
           </span>
-
           <span
             class="badge"
             [class.good]="selected.status === 'ACTIVE'"
@@ -310,27 +243,16 @@
           >
             {{ selected.status || "—" }}
           </span>
-
         </div>
-
       </div>
-
-
       <!-- Raw response -->
-
       <details class="raw-details">
-
         <summary>
           View raw response
         </summary>
-
         <pre>{{ selected | json }}</pre>
-
       </details>
-
-
       <div class="modal-actions">
-
         <button
           type="button"
           class="secondary"
@@ -338,11 +260,7 @@
         >
           Close
         </button>
-
       </div>
-
     </div>
-
   </div>
-
 }
