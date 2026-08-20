@@ -58,10 +58,13 @@ export class UsersComponent implements OnInit {
   @ViewChild("confirmModal")
   confirmModal!: ConfirmModalComponent;
 
+  private pendingDeleteUser: any = null;
+  // =========================================================
+  // NOTIFICATION MODAL
+  // =========================================================
+
   @ViewChild("notificationModal")
   notificationModal!: NotificationModalComponent;
-
-  private pendingDeleteUser: any = null;
 
   // =========================================================
   // CREATE / EDIT

@@ -16,6 +16,7 @@ import { ApiService } from "../../core/api.service";
 import { UiService } from "../../core/ui.service";
 import { PageComponent } from "../../shared/page.component";
 import { ConfirmModalComponent } from "../../shared/components/confirm-modal/confirm-modal";
+import { NotificationModalComponent } from "../../shared/components/notification-modal/notification-modal";
 
 // Register AG Grid community modules
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -29,6 +30,7 @@ ModuleRegistry.registerModules([AllCommunityModule]);
     PageComponent,
     AgGridAngular,
     ConfirmModalComponent,
+    NotificationModalComponent,
   ],
   templateUrl: "./roles.component.html",
   styleUrls: ["./roles.component.scss"],
@@ -54,6 +56,13 @@ export class RolesComponent implements OnInit {
   confirmModal!: ConfirmModalComponent;
 
   private pendingDeleteRole: any = null;
+
+  // =========================================================
+  // NOTIFICATION MODAL
+  // =========================================================
+
+  @ViewChild("notificationModal")
+  notificationModal!: NotificationModalComponent;
 
   // =========================================================
   // CREATE / EDIT
@@ -320,10 +329,14 @@ export class RolesComponent implements OnInit {
 
         error: (error) => {
           this.loading = false;
-
           console.error("Failed to load roles:", error);
-
-          this.ui.show(error?.error?.message || "Failed to load roles");
+          this.notificationModal.open({
+            type: "ERROR",
+            title: "Failed to load roles",
+            message: error,
+            contentType: "TEXT",
+            autoCloseAfter: 3000,
+          });
         },
       });
   }
@@ -349,6 +362,13 @@ export class RolesComponent implements OnInit {
 
     if (!roleId) {
       this.ui.show("Invalid role ID");
+      this.notificationModal.open({
+        type: "WARNING",
+        title: "Failed to load roles",
+        message: "Invalid role ID",
+        contentType: "TEXT",
+        autoCloseAfter: 3000,
+      });
 
       return;
     }
@@ -412,8 +432,13 @@ export class RolesComponent implements OnInit {
 
       if (!roleId) {
         this.saving = false;
-
-        this.ui.show("Invalid role ID");
+        this.notificationModal.open({
+          type: "WARNING",
+          title: "Failed to load roles",
+          message: "Invalid role ID",
+          contentType: "TEXT",
+          autoCloseAfter: 3000,
+        });
 
         return;
       }
@@ -421,24 +446,29 @@ export class RolesComponent implements OnInit {
       this.api.patch<any>(`/authorization/roles/${roleId}`, request).subscribe({
         next: () => {
           this.saving = false;
-
           this.formOpen = false;
-
           this.editMode = false;
-
           this.resetForm();
-
-          this.ui.show("Role updated successfully");
-
+          this.notificationModal.open({
+            type: "SUCCESS",
+            title: "Failed to load roles",
+            message: "Role updated successfully",
+            contentType: "TEXT",
+            autoCloseAfter: 3000,
+          });
           this.load();
         },
 
         error: (error) => {
           this.saving = false;
-
           console.error("Failed to update role:", error);
-
-          this.ui.show(error?.error?.message || "Failed to update role");
+          this.notificationModal.open({
+            type: "ERROR",
+            title: "Failed to update role",
+            message: error,
+            contentType: "TEXT",
+            autoCloseAfter: 3000,
+          });
         },
       });
 
@@ -452,22 +482,28 @@ export class RolesComponent implements OnInit {
     this.api.post<any>("/authorization/roles", request).subscribe({
       next: () => {
         this.saving = false;
-
         this.formOpen = false;
-
         this.resetForm();
-
-        this.ui.show("Role created successfully");
-
+        this.notificationModal.open({
+          type: "SUCCESS",
+          title: "Failed to create role",
+          message: "Role created successfully",
+          contentType: "TEXT",
+          autoCloseAfter: 3000,
+        });
         this.load();
       },
 
       error: (error) => {
         this.saving = false;
-
         console.error("Failed to create role:", error);
-
-        this.ui.show(error?.error?.message || "Failed to create role");
+        this.notificationModal.open({
+          type: "ERROR",
+          title: "Failed to create role",
+          message: error,
+          contentType: "TEXT",
+          autoCloseAfter: 3000,
+        });
       },
     });
   }
@@ -479,7 +515,13 @@ export class RolesComponent implements OnInit {
   deleteRole(role: any): void {
     const roleId = role?.role_id || role?.roleId;
     if (!roleId) {
-      this.ui.show("Invalid role ID");
+      this.notificationModal.open({
+        type: "WARNING",
+        title: "Failed to delete role",
+        message: "Invalid role ID",
+        contentType: "TEXT",
+        autoCloseAfter: 3000,
+      });
       return;
     }
     const roleName = role?.role_name || role?.roleName || "this role";
@@ -494,7 +536,7 @@ export class RolesComponent implements OnInit {
       cancelText: "Cancel",
     });
   }
-  
+
   /**
    * Bound to the confirm-modal's (confirmed) output.
    * Runs the actual soft-delete once the user confirms.
@@ -509,7 +551,13 @@ export class RolesComponent implements OnInit {
     const roleId = role?.role_id || role?.roleId;
 
     if (!roleId) {
-      this.ui.show("Invalid role ID");
+      this.notificationModal.open({
+        type: "WARNING",
+        title: "Failed to delete role",
+        message: "Invalid role ID",
+        contentType: "TEXT",
+        autoCloseAfter: 3000,
+      });
       return;
     }
     this.deleting = true;
@@ -520,13 +568,25 @@ export class RolesComponent implements OnInit {
       .subscribe({
         next: () => {
           this.deleting = false;
-          this.ui.show("Role deleted successfully");
+          this.notificationModal.open({
+            type: "ERROR",
+            title: "Failed to delete role",
+            message: "Role deleted successfully",
+            contentType: "TEXT",
+            autoCloseAfter: 3000,
+          });
           this.load();
         },
         error: (error) => {
           this.deleting = false;
           console.error("Failed to delete role:", error);
-          this.ui.show(error?.error?.message || "Failed to delete role");
+          this.notificationModal.open({
+            type: "ERROR",
+            title: "Failed to delete role",
+            message: error,
+            contentType: "TEXT",
+            autoCloseAfter: 3000,
+          });
         },
       });
   }
@@ -546,8 +606,13 @@ export class RolesComponent implements OnInit {
     const roleId = role?.role_id || role?.roleId;
 
     if (!roleId) {
-      this.ui.show("Invalid role ID");
-
+      this.notificationModal.open({
+        type: "WARNING",
+        title: "Failed to load role",
+        message: "Invalid role ID",
+        contentType: "TEXT",
+        autoCloseAfter: 3000,
+      });
       return;
     }
 
@@ -556,16 +621,18 @@ export class RolesComponent implements OnInit {
     this.api.get<any>(`/authorization/roles/${roleId}`).subscribe({
       next: (response) => {
         this.selected = response?.data || response;
-
         this.loading = false;
       },
-
       error: (error) => {
         this.loading = false;
-
         console.error("Failed to load role:", error);
-
-        this.ui.show(error?.error?.message || "Failed to load role details");
+        this.notificationModal.open({
+          type: "ERROR",
+          title: "Failed to load role",
+          message: "Failed to load role details",
+          contentType: "TEXT",
+          autoCloseAfter: 3000,
+        });
       },
     });
   }
@@ -585,13 +652,11 @@ export class RolesComponent implements OnInit {
   validateForm(): boolean {
     if (!this.form.roleName.trim()) {
       this.ui.show("Role name is required");
-
       return false;
     }
 
     if (!this.form.roleType) {
       this.ui.show("Role type is required");
-
       return false;
     }
 

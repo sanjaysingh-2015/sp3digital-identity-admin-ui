@@ -16,6 +16,7 @@ import { ApiService } from "../../core/api.service";
 import { UiService } from "../../core/ui.service";
 import { PageComponent } from "../../shared/page.component";
 import { ConfirmModalComponent } from "../../shared/components/confirm-modal/confirm-modal";
+import { NotificationModalComponent } from "../../shared/components/notification-modal/notification-modal";
 
 // Register AG Grid community modules
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -45,12 +46,12 @@ interface ActionOption {
     PageComponent,
     AgGridAngular,
     ConfirmModalComponent,
+    NotificationModalComponent,
   ],
   templateUrl: "./permissions.component.html",
   styleUrls: ["./permissions.component.scss"],
 })
 export class PermissionsComponent implements OnInit {
-
   // =========================================================
   // DATA
   // =========================================================
@@ -73,6 +74,13 @@ export class PermissionsComponent implements OnInit {
   private pendingDeletePermission: any = null;
 
   // =========================================================
+  // NOTIFICATION MODAL
+  // =========================================================
+
+  @ViewChild("notificationModal")
+  notificationModal!: NotificationModalComponent;
+
+  // =========================================================
   // CREATE / EDIT
   // =========================================================
 
@@ -85,12 +93,12 @@ export class PermissionsComponent implements OnInit {
     permissionName: "",
 
     resourceCategory: "",
-    resources: [] as string[],   // create mode (multi-select)
-    resource: "",                 // edit mode (single-select)
+    resources: [] as string[], // create mode (multi-select)
+    resource: "", // edit mode (single-select)
 
     actionCategory: "",
-    actions: [] as string[],      // create mode (multi-select)
-    action: "",                   // edit mode (single-select)
+    actions: [] as string[], // create mode (multi-select)
+    action: "", // edit mode (single-select)
 
     description: "",
 
@@ -135,9 +143,7 @@ export class PermissionsComponent implements OnInit {
         const permission = params.data;
 
         const permissionName =
-          permission?.permission_name ||
-          permission?.permissionName ||
-          "—";
+          permission?.permission_name || permission?.permissionName || "—";
 
         return `
           <div class="ag-permission-cell">
@@ -153,8 +159,7 @@ export class PermissionsComponent implements OnInit {
       minWidth: 140,
       sortable: true,
       filter: true,
-      valueGetter: (params) =>
-        params.data?.resource || "—",
+      valueGetter: (params) => params.data?.resource || "—",
     },
 
     {
@@ -163,8 +168,7 @@ export class PermissionsComponent implements OnInit {
       minWidth: 140,
       sortable: true,
       filter: true,
-      valueGetter: (params) =>
-        params.data?.action || "—",
+      valueGetter: (params) => params.data?.action || "—",
     },
 
     {
@@ -194,10 +198,7 @@ export class PermissionsComponent implements OnInit {
           className += " good";
         } else if (status === "SUSPENDED") {
           className += " warning";
-        } else if (
-          status === "INACTIVE" ||
-          status === "DELETED"
-        ) {
+        } else if (status === "INACTIVE" || status === "DELETED") {
           className += " danger";
         }
 
@@ -217,19 +218,16 @@ export class PermissionsComponent implements OnInit {
       filter: false,
 
       cellRenderer: (params: ICellRendererParams) => {
-
         const permission = params.data;
 
         const permissionId =
-          permission?.permission_id ||
-          permission?.permissionId;
+          permission?.permission_id || permission?.permissionId;
 
         if (!permissionId) {
           return "";
         }
 
-        const isDeleted =
-          permission?.status === "DELETED";
+        const isDeleted = permission?.status === "DELETED";
 
         if (isDeleted) {
           return `
@@ -277,23 +275,19 @@ export class PermissionsComponent implements OnInit {
       },
 
       onCellClicked: (params) => {
-
-        const target =
-          params.event?.target as HTMLElement;
+        const target = params.event?.target as HTMLElement;
 
         if (!target) {
           return;
         }
 
-        const action =
-          target.getAttribute("data-action");
+        const action = target.getAttribute("data-action");
 
         if (!action) {
           return;
         }
 
         switch (action) {
-
           case "view":
             this.select(params.data);
             break;
@@ -358,7 +352,6 @@ export class PermissionsComponent implements OnInit {
   // =========================================================
 
   load(): void {
-
     this.loading = true;
 
     this.api
@@ -367,9 +360,7 @@ export class PermissionsComponent implements OnInit {
         limit: 100,
       })
       .subscribe({
-
         next: (response) => {
-
           this.rows =
             response?.data?.items ||
             response?.items ||
@@ -378,33 +369,24 @@ export class PermissionsComponent implements OnInit {
             [];
 
           this.loading = false;
-
           // Refresh AG Grid
           if (this.gridApi) {
-            this.gridApi.setGridOption(
-              "rowData",
-              this.rows,
-            );
-
+            this.gridApi.setGridOption("rowData", this.rows);
             setTimeout(() => {
               this.gridApi.sizeColumnsToFit();
             });
           }
         },
-
         error: (error) => {
-
           this.loading = false;
-
-          console.error(
-            "Failed to load permissions:",
-            error,
-          );
-
-          this.ui.show(
-            error?.error?.message ||
-            "Failed to load permissions",
-          );
+          console.error("Failed to load permissions:", error);
+          this.notificationModal.open({
+            type: "ERROR",
+            title: "Failed to load permissions",
+            message: error,
+            contentType: "TEXT",
+            autoCloseAfter: 3000,
+          });
         },
       });
   }
@@ -414,38 +396,24 @@ export class PermissionsComponent implements OnInit {
   // =========================================================
 
   loadResourceCategories(): void {
-
     this.loadingResourceCategories = true;
-
-    this.api
-      .get<any>("/resources/categories")
-      .subscribe({
-
-        next: (response) => {
-
-          this.resourceCategories =
-            response?.data ||
-            response ||
-            [];
-
-          this.loadingResourceCategories = false;
-        },
-
-        error: (error) => {
-
-          this.loadingResourceCategories = false;
-
-          console.error(
-            "Failed to load resource categories:",
-            error,
-          );
-
-          this.ui.show(
-            error?.error?.message ||
-            "Failed to load resource categories",
-          );
-        },
-      });
+    this.api.get<any>("/resources/categories").subscribe({
+      next: (response) => {
+        this.resourceCategories = response?.data || response || [];
+        this.loadingResourceCategories = false;
+      },
+      error: (error) => {
+        this.loadingResourceCategories = false;
+        console.error("Failed to load resource categories:", error);
+        this.notificationModal.open({
+          type: "ERROR",
+          title: "Failed to load resource categories",
+          message: error,
+          contentType: "TEXT",
+          autoCloseAfter: 3000,
+        });
+      },
+    });
   }
 
   // =========================================================
@@ -453,7 +421,6 @@ export class PermissionsComponent implements OnInit {
   // =========================================================
 
   loadResourcesForCategory(category: string): void {
-
     if (!category) {
       this.resourceOptions = [];
       return;
@@ -461,37 +428,23 @@ export class PermissionsComponent implements OnInit {
 
     this.loadingResources = true;
 
-    this.api
-      .get<any>(
-        `/resources/category/${category}`,
-      )
-      .subscribe({
-
-        next: (response) => {
-
-          this.resourceOptions =
-            response?.data ||
-            response ||
-            [];
-
-          this.loadingResources = false;
-        },
-
-        error: (error) => {
-
-          this.loadingResources = false;
-
-          console.error(
-            "Failed to load resources:",
-            error,
-          );
-
-          this.ui.show(
-            error?.error?.message ||
-            "Failed to load resources",
-          );
-        },
-      });
+    this.api.get<any>(`/resources/category/${category}`).subscribe({
+      next: (response) => {
+        this.resourceOptions = response?.data || response || [];
+        this.loadingResources = false;
+      },
+      error: (error) => {
+        this.loadingResources = false;
+        console.error("Failed to load resources:", error);
+        this.notificationModal.open({
+          type: "ERROR",
+          title: "Failed to load resources",
+          message: error,
+          contentType: "TEXT",
+          autoCloseAfter: 3000,
+        });
+      },
+    });
   }
 
   /**
@@ -501,7 +454,6 @@ export class PermissionsComponent implements OnInit {
    * single-select for edit).
    */
   onResourceCategoryChange(): void {
-
     if (this.editMode) {
       this.form.resource = "";
     } else {
@@ -516,38 +468,25 @@ export class PermissionsComponent implements OnInit {
   // =========================================================
 
   loadActionCategories(): void {
-
     this.loadingActionCategories = true;
 
-    this.api
-      .get<any>("/actions/categories")
-      .subscribe({
-
-        next: (response) => {
-
-          this.actionCategories =
-            response?.data ||
-            response ||
-            [];
-
-          this.loadingActionCategories = false;
-        },
-
-        error: (error) => {
-
-          this.loadingActionCategories = false;
-
-          console.error(
-            "Failed to load action categories:",
-            error,
-          );
-
-          this.ui.show(
-            error?.error?.message ||
-            "Failed to load action categories",
-          );
-        },
-      });
+    this.api.get<any>("/actions/categories").subscribe({
+      next: (response) => {
+        this.actionCategories = response?.data || response || [];
+        this.loadingActionCategories = false;
+      },
+      error: (error) => {
+        this.loadingActionCategories = false;
+        console.error("Failed to load action categories:", error);
+        this.notificationModal.open({
+          type: "ERROR",
+          title: "Failed to load action categories",
+          message: error,
+          contentType: "TEXT",
+          autoCloseAfter: 3000,
+        });
+      },
+    });
   }
 
   // =========================================================
@@ -555,7 +494,6 @@ export class PermissionsComponent implements OnInit {
   // =========================================================
 
   loadActionsForCategory(category: string): void {
-
     if (!category) {
       this.actionOptions = [];
       return;
@@ -563,37 +501,23 @@ export class PermissionsComponent implements OnInit {
 
     this.loadingActions = true;
 
-    this.api
-      .get<any>(
-        `/actions/category/${category}`,
-      )
-      .subscribe({
-
-        next: (response) => {
-
-          this.actionOptions =
-            response?.data ||
-            response ||
-            [];
-
-          this.loadingActions = false;
-        },
-
-        error: (error) => {
-
-          this.loadingActions = false;
-
-          console.error(
-            "Failed to load actions:",
-            error,
-          );
-
-          this.ui.show(
-            error?.error?.message ||
-            "Failed to load actions",
-          );
-        },
-      });
+    this.api.get<any>(`/actions/category/${category}`).subscribe({
+      next: (response) => {
+        this.actionOptions = response?.data || response || [];
+        this.loadingActions = false;
+      },
+      error: (error) => {
+        this.loadingActions = false;
+        console.error("Failed to load actions:", error);
+        this.notificationModal.open({
+          type: "ERROR",
+          title: "Failed to load actions",
+          message: error,
+          contentType: "TEXT",
+          autoCloseAfter: 3000,
+        });
+      },
+    });
   }
 
   /**
@@ -603,7 +527,6 @@ export class PermissionsComponent implements OnInit {
    * single-select for edit).
    */
   onActionCategoryChange(): void {
-
     if (this.editMode) {
       this.form.action = "";
     } else {
@@ -618,7 +541,6 @@ export class PermissionsComponent implements OnInit {
   // =========================================================
 
   openCreate(): void {
-
     this.editMode = false;
 
     this.resetForm();
@@ -634,40 +556,32 @@ export class PermissionsComponent implements OnInit {
   // =========================================================
 
   openEdit(permission: any): void {
-
-    const permissionId =
-      permission?.permission_id ||
-      permission?.permissionId;
+    const permissionId = permission?.permission_id || permission?.permissionId;
 
     if (!permissionId) {
-
-      this.ui.show(
-        "Invalid permission ID",
-      );
-
+      this.notificationModal.open({
+        type: "WARNING",
+        title: "Failed to update permission",
+        message: "Invalid permission ID",
+        contentType: "TEXT",
+        autoCloseAfter: 3000,
+      });
       return;
     }
 
     this.editMode = true;
 
     const resourceCategory =
-      permission?.resource_category ||
-      permission?.resourceCategory ||
-      "";
+      permission?.resource_category || permission?.resourceCategory || "";
 
     const actionCategory =
-      permission?.action_category ||
-      permission?.actionCategory ||
-      "";
+      permission?.action_category || permission?.actionCategory || "";
 
     this.form = {
-
       permissionId,
 
       permissionName:
-        permission?.permission_name ||
-        permission?.permissionName ||
-        "",
+        permission?.permission_name || permission?.permissionName || "",
 
       resourceCategory,
       resources: [],
@@ -687,13 +601,10 @@ export class PermissionsComponent implements OnInit {
         (permission?.actions || [])[0] ||
         "",
 
-      description:
-        permission?.description || "",
+      description: permission?.description || "",
 
       allowDuplicates:
-        permission?.allow_duplicates ||
-        permission?.allowDuplicates ||
-        false,
+        permission?.allow_duplicates || permission?.allowDuplicates || false,
     };
 
     // Load the option lists for the pre-selected categories.
@@ -710,7 +621,6 @@ export class PermissionsComponent implements OnInit {
   // =========================================================
 
   closeCreate(): void {
-
     if (this.saving) {
       return;
     }
@@ -727,7 +637,6 @@ export class PermissionsComponent implements OnInit {
   // =========================================================
 
   save(): void {
-
     if (!this.validateForm()) {
       return;
     }
@@ -735,21 +644,15 @@ export class PermissionsComponent implements OnInit {
     this.saving = true;
 
     const request: any = {
+      permissionName: this.form.permissionName.trim(),
 
-      permissionName:
-        this.form.permissionName.trim(),
+      resourceCategory: this.form.resourceCategory,
 
-      resourceCategory:
-        this.form.resourceCategory,
+      actionCategory: this.form.actionCategory,
 
-      actionCategory:
-        this.form.actionCategory,
+      description: this.form.description.trim(),
 
-      description:
-        this.form.description.trim(),
-
-      allowDuplicates:
-        this.form.allowDuplicates,
+      allowDuplicates: this.form.allowDuplicates,
     };
 
     // Edit mode: a row is a single resource/action pair.
@@ -768,61 +671,48 @@ export class PermissionsComponent implements OnInit {
     // =======================================================
 
     if (this.editMode) {
-
-      const permissionId =
-        this.form.permissionId;
-
+      const permissionId = this.form.permissionId;
       if (!permissionId) {
-
         this.saving = false;
-
-        this.ui.show(
-          "Invalid permission ID",
-        );
-
+        this.notificationModal.open({
+          type: "WARNING",
+          title: "Failed to update permission",
+          message: "Invalid permission ID",
+          contentType: "TEXT",
+          autoCloseAfter: 3000,
+        });
         return;
       }
 
       this.api
-        .patch<any>(
-          `/authorization/permissions/${permissionId}`,
-          request,
-        )
+        .patch<any>(`/authorization/permissions/${permissionId}`, request)
         .subscribe({
-
           next: () => {
-
             this.saving = false;
-
             this.formOpen = false;
-
             this.editMode = false;
-
             this.resetForm();
-
-            this.ui.show(
-              "Permission updated successfully",
-            );
-
+            this.notificationModal.open({
+              type: "SUCCESS",
+              title: "Permission update",
+              message: "Permission updated successfully",
+              contentType: "TEXT",
+              autoCloseAfter: 3000,
+            });
             this.load();
           },
-
           error: (error) => {
-
             this.saving = false;
-
-            console.error(
-              "Failed to update permission:",
-              error,
-            );
-
-            this.ui.show(
-              error?.error?.message ||
-              "Failed to update permission",
-            );
+            console.error("Failed to update permission:", error);
+            this.notificationModal.open({
+              type: "ERROR",
+              title: "Failed to update permission",
+              message: error,
+              contentType: "TEXT",
+              autoCloseAfter: 3000,
+            });
           },
         });
-
       return;
     }
 
@@ -830,43 +720,32 @@ export class PermissionsComponent implements OnInit {
     // CREATE
     // =======================================================
 
-    this.api
-      .post<any>(
-        "/authorization/permissions",
-        request,
-      )
-      .subscribe({
-
-        next: () => {
-
-          this.saving = false;
-
-          this.formOpen = false;
-
-          this.resetForm();
-
-          this.ui.show(
-            "Permission created successfully",
-          );
-
-          this.load();
-        },
-
-        error: (error) => {
-
-          this.saving = false;
-
-          console.error(
-            "Failed to create permission:",
-            error,
-          );
-
-          this.ui.show(
-            error?.error?.message ||
-            "Failed to create permission",
-          );
-        },
-      });
+    this.api.post<any>("/authorization/permissions", request).subscribe({
+      next: () => {
+        this.saving = false;
+        this.formOpen = false;
+        this.resetForm();
+        this.notificationModal.open({
+          type: "SUCCESS",
+          title: "Permission create",
+          message: "Permission created successfully",
+          contentType: "TEXT",
+          autoCloseAfter: 3000,
+        });
+        this.load();
+      },
+      error: (error) => {
+        this.saving = false;
+        console.error("Failed to create permission:", error);
+        this.notificationModal.open({
+          type: "ERROR",
+          title: "Failed to creat permission",
+          message: error,
+          contentType: "TEXT",
+          autoCloseAfter: 3000,
+        });
+      },
+    });
   }
 
   // =========================================================
@@ -874,13 +753,15 @@ export class PermissionsComponent implements OnInit {
   // =========================================================
 
   deletePermission(permission: any): void {
-    const permissionId =
-      permission?.permission_id ||
-      permission?.permissionId;
+    const permissionId = permission?.permission_id || permission?.permissionId;
     if (!permissionId) {
-      this.ui.show(
-        "Invalid permission ID",
-      );
+      this.notificationModal.open({
+        type: "WARNING",
+        title: "Failed to delete permission",
+        message: "Invalid permission ID",
+        contentType: "TEXT",
+        autoCloseAfter: 3000,
+      });
       return;
     }
     const permissionName =
@@ -905,52 +786,52 @@ export class PermissionsComponent implements OnInit {
    * Runs the actual soft-delete once the user confirms.
    */
   onDeletePermissionConfirmed(): void {
-
     const permission = this.pendingDeletePermission;
-
     this.pendingDeletePermission = null;
-
     if (!permission) {
       return;
     }
 
-    const permissionId =
-      permission?.permission_id ||
-      permission?.permissionId;
+    const permissionId = permission?.permission_id || permission?.permissionId;
 
     if (!permissionId) {
-      this.ui.show(
-        "Invalid permission ID",
-      );
+      this.notificationModal.open({
+        type: "WARNING",
+        title: "Failed to delete permission",
+        message: "Invalid permission ID",
+        contentType: "TEXT",
+        autoCloseAfter: 3000,
+      });
       return;
     }
 
     this.deleting = true;
     this.api
-      .patch<any>(
-        `/authorization/permissions/${permissionId}/status`,
-        {
-          status: "DELETED",
-        },
-      )
+      .patch<any>(`/authorization/permissions/${permissionId}/status`, {
+        status: "DELETED",
+      })
       .subscribe({
         next: () => {
           this.deleting = false;
-          this.ui.show(
-            "Permission deleted successfully",
-          );
+          this.notificationModal.open({
+            type: "SUCCESS",
+            title: "Permission delete",
+            message: "Permission deleted successfully",
+            contentType: "TEXT",
+            autoCloseAfter: 3000,
+          });
           this.load();
         },
         error: (error) => {
           this.deleting = false;
-          console.error(
-            "Failed to delete permission:",
-            error,
-          );
-          this.ui.show(
-            error?.error?.message ||
-            "Failed to delete permission",
-          );
+          console.error("Failed to delete permission:", error);
+          this.notificationModal.open({
+            type: "ERROR",
+            title: "Failed to delete permission",
+            message: error,
+            contentType: "TEXT",
+            autoCloseAfter: 3000,
+          });
         },
       });
   }
@@ -967,52 +848,35 @@ export class PermissionsComponent implements OnInit {
   // =========================================================
 
   select(permission: any): void {
-
-    const permissionId =
-      permission?.permission_id ||
-      permission?.permissionId;
-
+    const permissionId = permission?.permission_id || permission?.permissionId;
     if (!permissionId) {
-
-      this.ui.show(
-        "Invalid permission ID",
-      );
-
+      this.notificationModal.open({
+        type: "WARNING",
+        title: "Failed to load permission",
+        message: "Invalid permission ID",
+        contentType: "TEXT",
+        autoCloseAfter: 3000,
+      });
       return;
     }
-
     this.loading = true;
-
-    this.api
-      .get<any>(
-        `/authorization/permissions/${permissionId}`,
-      )
-      .subscribe({
-
-        next: (response) => {
-
-          this.selected =
-            response?.data ||
-            response;
-
-          this.loading = false;
-        },
-
-        error: (error) => {
-
-          this.loading = false;
-
-          console.error(
-            "Failed to load permission:",
-            error,
-          );
-
-          this.ui.show(
-            error?.error?.message ||
-            "Failed to load permission details",
-          );
-        },
-      });
+    this.api.get<any>(`/authorization/permissions/${permissionId}`).subscribe({
+      next: (response) => {
+        this.selected = response?.data || response;
+        this.loading = false;
+      },
+      error: (error) => {
+        this.loading = false;
+        console.error("Failed to load permission:", error);
+        this.notificationModal.open({
+          type: "ERROR",
+          title: "Failed to load permission details",
+          message: error,
+          contentType: "TEXT",
+          autoCloseAfter: 3000,
+        });
+      },
+    });
   }
 
   // =========================================================
@@ -1028,74 +892,37 @@ export class PermissionsComponent implements OnInit {
   // =========================================================
 
   validateForm(): boolean {
-
     if (!this.form.permissionName.trim()) {
-
-      this.ui.show(
-        "Permission name is required",
-      );
-
+      this.ui.show("Permission name is required");
       return false;
     }
 
     if (!this.form.resourceCategory) {
-
-      this.ui.show(
-        "Resource category is required",
-      );
-
+      this.ui.show("Resource category is required");
       return false;
     }
-
     if (this.editMode) {
-
       if (!this.form.resource) {
-
-        this.ui.show(
-          "Resource is required",
-        );
-
+        this.ui.show("Resource is required");
         return false;
       }
-
     } else if (!this.form.resources.length) {
-
-      this.ui.show(
-        "At least one resource is required",
-      );
-
+      this.ui.show("At least one resource is required");
       return false;
     }
-
     if (!this.form.actionCategory) {
-
-      this.ui.show(
-        "Action category is required",
-      );
-
+      this.ui.show("Action category is required");
       return false;
     }
-
     if (this.editMode) {
-
       if (!this.form.action) {
-
-        this.ui.show(
-          "Action is required",
-        );
-
+        this.ui.show("Action is required");
         return false;
       }
-
     } else if (!this.form.actions.length) {
-
-      this.ui.show(
-        "At least one action is required",
-      );
-
+      this.ui.show("At least one action is required");
       return false;
     }
-
     return true;
   }
 
@@ -1104,23 +931,16 @@ export class PermissionsComponent implements OnInit {
   // =========================================================
 
   resetForm(): void {
-
     this.form = {
-
       permissionId: null,
-
       permissionName: "",
-
       resourceCategory: "",
       resources: [],
       resource: "",
-
       actionCategory: "",
       actions: [],
       action: "",
-
       description: "",
-
       allowDuplicates: false,
     };
   }
@@ -1133,7 +953,6 @@ export class PermissionsComponent implements OnInit {
   // =========================================================
 
   formatLabel(value: string | null | undefined): string {
-
     if (!value) {
       return "—";
     }
@@ -1150,11 +969,9 @@ export class PermissionsComponent implements OnInit {
    * (e.g. on the details view) isn't loaded.
    */
   resourceLabel(code: string): string {
-
     const match = this.resourceOptions.find(
       (option) => option.resourceCode === code,
     );
-
     return match?.resourceName || this.formatLabel(code);
   }
 
@@ -1164,11 +981,9 @@ export class PermissionsComponent implements OnInit {
    * (e.g. on the details view) isn't loaded.
    */
   actionLabel(code: string): string {
-
     const match = this.actionOptions.find(
       (option) => option.actionCode === code,
     );
-
     return match?.actionName || this.formatLabel(code);
   }
 
@@ -1178,7 +993,6 @@ export class PermissionsComponent implements OnInit {
    * of a legacy resources[] array if present.
    */
   resourceDisplayLabel(permission: any): string {
-
     const code =
       permission?.resource ||
       permission?.resourceCode ||
@@ -1197,7 +1011,6 @@ export class PermissionsComponent implements OnInit {
    * of a legacy actions[] array if present.
    */
   actionDisplayLabel(permission: any): string {
-
     const code =
       permission?.action ||
       permission?.actionCode ||
@@ -1215,7 +1028,6 @@ export class PermissionsComponent implements OnInit {
   // =========================================================
 
   private escapeHtml(value: any): string {
-
     if (value === null || value === undefined) {
       return "";
     }
