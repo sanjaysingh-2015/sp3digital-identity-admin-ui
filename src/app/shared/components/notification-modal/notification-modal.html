@@ -1,31 +1,169 @@
 @if (visible) {
-<div class="modal-backdrop" (click)="onCancel()">
-    <div class="confirm-modal" role="dialog" aria-modal="true" [attr.aria-labelledby]="'confirm-modal-title'"
-        (click)="$event.stopPropagation()">
-        <!-- Header -->
-        <div class="modal-header">
-            <h3 id="confirm-modal-title">
-                {{ title }}
-            </h3>
-            <button type="button" class="close-button" aria-label="Close" (click)="onCancel()">
-                ×
-            </button>
+
+  <div
+    class="notification-modal-backdrop"
+    (click)="close()"
+  >
+
+    <div
+      class="notification-modal"
+      [class.type-success]="type === 'SUCCESS'"
+      [class.type-warning]="type === 'WARNING'"
+      [class.type-error]="type === 'ERROR'"
+      [class.type-information]="type === 'INFORMATION'"
+      role="dialog"
+      aria-modal="true"
+      (click)="$event.stopPropagation()"
+    >
+
+      <!-- =====================================================
+           HEADER
+      ====================================================== -->
+
+      <div class="notification-modal-header">
+
+        <div class="notification-title-container">
+
+          <div class="notification-icon">
+
+            @if (type === 'SUCCESS') {
+              ✓
+            }
+
+            @if (type === 'WARNING') {
+              !
+            }
+
+            @if (type === 'ERROR') {
+              ×
+            }
+
+            @if (type === 'INFORMATION') {
+              i
+            }
+
+          </div>
+
+          <h3>
+            {{ title }}
+          </h3>
+
         </div>
 
-        <!-- Body -->
-        <div class="modal-body">
-            <p>{{ message }}</p>
-        </div>
 
-        <!-- Footer -->
-        <div class="modal-footer">
-            <button type="button" class="secondary" (click)="onCancel()">
-                {{ cancelText }}
-            </button>
-            <button type="button" class="primary" (click)="onConfirm()">
-                {{ confirmText }}
-            </button>
-        </div>
+        <button
+          type="button"
+          class="notification-close-button"
+          aria-label="Close"
+          (click)="close()"
+        >
+          ×
+        </button>
+
+      </div>
+
+
+      <!-- =====================================================
+           BODY
+      ====================================================== -->
+
+      <div class="notification-modal-body">
+
+        <!-- TEXT CONTENT -->
+
+        @if (contentType === 'TEXT') {
+
+          <div class="notification-text">
+            {{ message }}
+          </div>
+
+        }
+
+
+        <!-- JSON CONTENT -->
+
+        @if (
+          contentType === 'JSON' &&
+          jsonRows.length > 0
+        ) {
+
+          <div class="notification-table-container">
+
+            <table class="notification-table">
+
+              <thead>
+
+                <tr>
+
+                  @for (
+                    header of jsonHeaders;
+                    track header
+                  ) {
+
+                    <th>
+                      {{ header }}
+                    </th>
+
+                  }
+
+                </tr>
+
+              </thead>
+
+
+              <tbody>
+
+                @for (
+                  row of jsonRows;
+                  track $index
+                ) {
+
+                  <tr>
+
+                    @for (
+                      header of jsonHeaders;
+                      track header
+                    ) {
+
+                      <td>
+                        {{ formatJsonValue(row[header]) }}
+                      </td>
+
+                    }
+
+                  </tr>
+
+                }
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        }
+
+      </div>
+
+
+      <!-- =====================================================
+           FOOTER
+      ====================================================== -->
+
+      <div class="notification-modal-footer">
+
+        <button
+          type="button"
+          class="notification-ok-button"
+          (click)="close()"
+        >
+          OK
+        </button>
+
+      </div>
+
     </div>
-</div>
+
+  </div>
+
 }

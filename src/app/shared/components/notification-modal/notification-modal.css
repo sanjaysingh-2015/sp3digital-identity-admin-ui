@@ -1,35 +1,44 @@
 /* =========================================================
-   MODAL BACKDROP
+   BACKDROP
 ========================================================= */
 
-.modal-backdrop {
+.notification-modal-backdrop {
   position: fixed;
+
   inset: 0;
+
   width: 100%;
   height: 100%;
 
   display: flex;
+
   align-items: center;
   justify-content: center;
 
+  padding: 20px;
+
   background: rgba(0, 0, 0, 0.55);
 
-  z-index: 9999;
-
-  padding: 20px;
+  z-index: 10000;
 
   box-sizing: border-box;
 
-  animation: modalFadeIn 0.15s ease-out;
+  animation: notificationFadeIn 0.15s ease-out;
 }
 
+
 /* =========================================================
-   MODAL CONTAINER
+   MODAL
 ========================================================= */
 
-.confirm-modal {
-  width: 450px;
+.notification-modal {
+  width: 650px;
+
   max-width: 100%;
+  max-height: calc(100vh - 40px);
+
+  display: flex;
+  flex-direction: column;
 
   background: #ffffff;
 
@@ -43,56 +52,209 @@
 
   box-sizing: border-box;
 
-  animation: modalSlideIn 0.2s ease-out;
+  animation: notificationSlideIn 0.2s ease-out;
 }
 
+
 /* =========================================================
-   MODAL HEADER
+   HEADER
 ========================================================= */
 
-.modal-header {
+.notification-modal-header {
   display: flex;
 
   align-items: center;
   justify-content: space-between;
 
-  min-height: 58px;
+  min-height: 64px;
 
-  padding: 16px 20px;
-
-  background: #ffffff;
+  padding: 14px 20px;
 
   border-bottom: 1px solid #e5e7eb;
 
   box-sizing: border-box;
 }
 
-.modal-header h3 {
+
+/* =========================================================
+   TITLE
+========================================================= */
+
+.notification-title-container {
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+
+  min-width: 0;
+}
+
+.notification-title-container h3 {
   margin: 0;
+
+  font-size: 18px;
+
+  font-weight: 600;
+
+  line-height: 1.4;
 
   color: #1f2937;
 
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1.4;
+  word-break: break-word;
 }
 
+
 /* =========================================================
-   CLOSE BUTTON
+   ICON
 ========================================================= */
 
-.close-button {
+.notification-icon {
+  width: 34px;
+  height: 34px;
+
+  min-width: 34px;
+
   display: flex;
 
   align-items: center;
   justify-content: center;
 
+  border-radius: 50%;
+
+  font-size: 18px;
+
+  font-weight: 700;
+}
+
+
+/* =========================================================
+   SUCCESS
+========================================================= */
+
+.type-success .notification-icon {
+  background: #dcfce7;
+
+  color: #15803d;
+}
+
+.type-success .notification-modal-header {
+  border-bottom-color: #bbf7d0;
+}
+
+.type-success .notification-ok-button {
+  background: #16a34a;
+
+  border-color: #16a34a;
+}
+
+.type-success .notification-ok-button:hover {
+  background: #15803d;
+
+  border-color: #15803d;
+}
+
+
+/* =========================================================
+   WARNING
+========================================================= */
+
+.type-warning .notification-icon {
+  background: #fef3c7;
+
+  color: #b45309;
+}
+
+.type-warning .notification-modal-header {
+  border-bottom-color: #fde68a;
+}
+
+.type-warning .notification-ok-button {
+  background: #d97706;
+
+  border-color: #d97706;
+}
+
+.type-warning .notification-ok-button:hover {
+  background: #b45309;
+
+  border-color: #b45309;
+}
+
+
+/* =========================================================
+   ERROR
+========================================================= */
+
+.type-error .notification-icon {
+  background: #fee2e2;
+
+  color: #dc2626;
+}
+
+.type-error .notification-modal-header {
+  border-bottom-color: #fecaca;
+}
+
+.type-error .notification-ok-button {
+  background: #dc2626;
+
+  border-color: #dc2626;
+}
+
+.type-error .notification-ok-button:hover {
+  background: #b91c1c;
+
+  border-color: #b91c1c;
+}
+
+
+/* =========================================================
+   INFORMATION
+========================================================= */
+
+.type-information .notification-icon {
+  background: #dbeafe;
+
+  color: #2563eb;
+}
+
+.type-information .notification-modal-header {
+  border-bottom-color: #bfdbfe;
+}
+
+.type-information .notification-ok-button {
+  background: #2563eb;
+
+  border-color: #2563eb;
+}
+
+.type-information .notification-ok-button:hover {
+  background: #1d4ed8;
+
+  border-color: #1d4ed8;
+}
+
+
+/* =========================================================
+   CLOSE BUTTON
+========================================================= */
+
+.notification-close-button {
   width: 32px;
   height: 32px;
+
+  min-width: 32px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
 
   padding: 0;
 
   border: none;
+
   border-radius: 6px;
 
   background: transparent;
@@ -100,7 +262,6 @@
   color: #6b7280;
 
   font-size: 24px;
-  font-weight: 400;
 
   line-height: 1;
 
@@ -111,45 +272,152 @@
     color 0.15s ease;
 }
 
-.close-button:hover {
+.notification-close-button:hover {
   background: #f3f4f6;
 
   color: #111827;
 }
 
-.close-button:focus-visible {
+.notification-close-button:focus-visible {
   outline: 2px solid #2563eb;
 
   outline-offset: 2px;
 }
 
+
 /* =========================================================
-   MODAL BODY
+   BODY
 ========================================================= */
 
-.modal-body {
-  padding: 24px 20px;
+.notification-modal-body {
+  padding: 22px 20px;
 
   background: #ffffff;
+
+  overflow: auto;
+
+  flex: 1;
+
+  min-height: 0;
 }
 
-.modal-body p {
+
+/* =========================================================
+   TEXT CONTENT
+========================================================= */
+
+.notification-text {
   margin: 0;
 
-  color: #4b5563;
+  color: #374151;
 
   font-size: 15px;
 
   line-height: 1.6;
 
-  white-space: pre-line;
+  /*
+   * Preserve:
+   * \n = new line
+   * \t = tab
+   * Multiple spaces
+   */
+  white-space: pre-wrap;
+
+  overflow-wrap: anywhere;
+
+  word-break: break-word;
+
+  font-family: inherit;
 }
 
+
 /* =========================================================
-   MODAL FOOTER
+   JSON TABLE CONTAINER
 ========================================================= */
 
-.modal-footer {
+.notification-table-container {
+  width: 100%;
+
+  overflow-x: auto;
+
+  border: 1px solid #e5e7eb;
+
+  border-radius: 6px;
+}
+
+
+/* =========================================================
+   JSON TABLE
+========================================================= */
+
+.notification-table {
+  width: 100%;
+
+  min-width: 500px;
+
+  border-collapse: collapse;
+
+  font-size: 14px;
+
+  background: #ffffff;
+}
+
+
+/* =========================================================
+   TABLE HEADER
+========================================================= */
+
+.notification-table thead th {
+  padding: 11px 12px;
+
+  background: #f3f4f6;
+
+  color: #374151;
+
+  border-bottom: 1px solid #d1d5db;
+
+  font-size: 13px;
+
+  font-weight: 600;
+
+  text-align: left;
+
+  white-space: nowrap;
+}
+
+
+/* =========================================================
+   TABLE BODY
+========================================================= */
+
+.notification-table tbody td {
+  padding: 10px 12px;
+
+  color: #4b5563;
+
+  border-bottom: 1px solid #e5e7eb;
+
+  vertical-align: top;
+
+  white-space: pre-wrap;
+
+  word-break: break-word;
+}
+
+.notification-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.notification-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
+.notification-modal-footer {
   display: flex;
 
   align-items: center;
@@ -157,7 +425,7 @@
 
   gap: 10px;
 
-  padding: 16px 20px;
+  padding: 14px 20px;
 
   background: #f9fafb;
 
@@ -166,107 +434,51 @@
   box-sizing: border-box;
 }
 
+
 /* =========================================================
-   COMMON BUTTON STYLES
+   OK BUTTON
 ========================================================= */
 
-.modal-footer button {
+.notification-ok-button {
   min-width: 90px;
 
   height: 38px;
 
-  padding: 0 16px;
+  padding: 0 18px;
 
   border-radius: 6px;
 
-  font-size: 14px;
-  font-weight: 500;
+  color: #ffffff;
 
-  line-height: 1;
+  font-size: 14px;
+
+  font-weight: 500;
 
   cursor: pointer;
 
   transition:
     background-color 0.15s ease,
     border-color 0.15s ease,
-    color 0.15s ease,
-    box-shadow 0.15s ease,
     transform 0.05s ease;
-
-  box-sizing: border-box;
 }
 
-.modal-footer button:active {
+.notification-ok-button:active {
   transform: translateY(1px);
 }
 
-.modal-footer button:focus-visible {
+.notification-ok-button:focus-visible {
   outline: 2px solid #2563eb;
 
   outline-offset: 2px;
 }
 
-/* =========================================================
-   CANCEL / SECONDARY BUTTON
-========================================================= */
-
-.modal-footer .secondary {
-  background: #ffffff;
-
-  color: #374151;
-
-  border: 1px solid #d1d5db;
-}
-
-.modal-footer .secondary:hover {
-  background: #f3f4f6;
-
-  border-color: #9ca3af;
-
-  color: #111827;
-}
-
-/* =========================================================
-   CONFIRM / PRIMARY BUTTON
-========================================================= */
-
-.modal-footer .primary {
-  background: #2563eb;
-
-  color: #ffffff;
-
-  border: 1px solid #2563eb;
-}
-
-.modal-footer .primary:hover {
-  background: #1d4ed8;
-
-  border-color: #1d4ed8;
-}
-
-.modal-footer .primary:active {
-  background: #1e40af;
-
-  border-color: #1e40af;
-}
-
-/* =========================================================
-   DISABLED BUTTON
-========================================================= */
-
-.modal-footer button:disabled {
-  opacity: 0.55;
-
-  cursor: not-allowed;
-
-  pointer-events: none;
-}
 
 /* =========================================================
    ANIMATIONS
 ========================================================= */
 
-@keyframes modalFadeIn {
+@keyframes notificationFadeIn {
+
   from {
     opacity: 0;
   }
@@ -274,76 +486,82 @@
   to {
     opacity: 1;
   }
+
 }
 
-@keyframes modalSlideIn {
+
+@keyframes notificationSlideIn {
+
   from {
     opacity: 0;
-    transform: translateY(-12px) scale(0.98);
+
+    transform:
+      translateY(-12px)
+      scale(0.98);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+
+    transform:
+      translateY(0)
+      scale(1);
   }
+
 }
+
 
 /* =========================================================
-   MOBILE / RESPONSIVE
+   RESPONSIVE
 ========================================================= */
 
-@media (max-width: 600px) {
-  .modal-backdrop {
+@media (max-width: 700px) {
+
+  .notification-modal-backdrop {
     padding: 16px;
   }
 
-  .confirm-modal {
+  .notification-modal {
     width: 100%;
+
+    max-height: calc(100vh - 32px);
 
     border-radius: 8px;
   }
 
-  .modal-header {
+  .notification-modal-header {
     padding: 14px 16px;
   }
 
-  .modal-header h3 {
-    font-size: 17px;
+  .notification-modal-body {
+    padding: 18px 16px;
   }
 
-  .modal-body {
-    padding: 20px 16px;
-  }
-
-  .modal-body p {
-    font-size: 14px;
-  }
-
-  .modal-footer {
+  .notification-modal-footer {
     padding: 14px 16px;
-
-    gap: 8px;
   }
 
-  .modal-footer button {
-    flex: 1;
-
-    min-width: 0;
+  .notification-table {
+    min-width: 450px;
   }
+
 }
+
 
 /* =========================================================
    REDUCED MOTION
 ========================================================= */
 
 @media (prefers-reduced-motion: reduce) {
-  .modal-backdrop,
-  .confirm-modal {
+
+  .notification-modal-backdrop,
+  .notification-modal {
     animation: none;
   }
 
-  .modal-footer button,
-  .close-button {
+  .notification-close-button,
+  .notification-ok-button {
     transition: none;
   }
+
 }

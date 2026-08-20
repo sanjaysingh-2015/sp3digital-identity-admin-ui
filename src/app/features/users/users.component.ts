@@ -16,6 +16,7 @@ import { ApiService } from "../../core/api.service";
 import { UiService } from "../../core/ui.service";
 import { PageComponent } from "../../shared/page.component";
 import { ConfirmModalComponent } from "../../shared/components/confirm-modal/confirm-modal";
+import { NotificationModalComponent } from "../../shared/components/notification-modal/notification-modal";
 
 // Register AG Grid community modules
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -29,12 +30,12 @@ ModuleRegistry.registerModules([AllCommunityModule]);
     PageComponent,
     AgGridAngular,
     ConfirmModalComponent,
+    NotificationModalComponent,
   ],
   templateUrl: "./users.component.html",
   styleUrls: ["./users.component.scss"],
 })
 export class UsersComponent implements OnInit {
-
   // =========================================================
   // DATA
   // =========================================================
@@ -50,13 +51,15 @@ export class UsersComponent implements OnInit {
 
   selected: any = null;
 
-  
   // =========================================================
   // CONFIRM MODAL
   // =========================================================
 
   @ViewChild("confirmModal")
   confirmModal!: ConfirmModalComponent;
+
+  @ViewChild("notificationModal")
+  notificationModal!: NotificationModalComponent;
 
   private pendingDeleteUser: any = null;
 
@@ -88,11 +91,7 @@ export class UsersComponent implements OnInit {
   // STATIC USER TYPES
   // =========================================================
 
-  readonly userTypes: string[] = [
-    "USER",
-    "ADMIN",
-    "SERVICE",
-  ];
+  readonly userTypes: string[] = ["USER", "ADMIN", "SERVICE"];
 
   // =========================================================
   // AG GRID
@@ -142,14 +141,9 @@ export class UsersComponent implements OnInit {
         const user = params.data;
 
         const countryCode =
-          user?.phone_country_code ||
-          user?.phoneCountryCode ||
-          "";
+          user?.phone_country_code || user?.phoneCountryCode || "";
 
-        const phone =
-          user?.phone_number ||
-          user?.phoneNumber ||
-          "";
+        const phone = user?.phone_number || user?.phoneNumber || "";
 
         return `${countryCode} ${phone}`.trim() || "—";
       },
@@ -161,8 +155,7 @@ export class UsersComponent implements OnInit {
       minWidth: 120,
       sortable: true,
       filter: true,
-      valueGetter: (params) =>
-        this.getUserType(params.data),
+      valueGetter: (params) => this.getUserType(params.data),
     },
 
     {
@@ -182,10 +175,7 @@ export class UsersComponent implements OnInit {
           className += " good";
         } else if (status === "SUSPENDED") {
           className += " warning";
-        } else if (
-          status === "INACTIVE" ||
-          status === "DELETED"
-        ) {
+        } else if (status === "INACTIVE" || status === "DELETED") {
           className += " danger";
         }
 
@@ -202,8 +192,7 @@ export class UsersComponent implements OnInit {
       flex: 1,
       minWidth: 170,
       sortable: true,
-      valueGetter: (params) =>
-        this.getCreatedDate(params.data),
+      valueGetter: (params) => this.getCreatedDate(params.data),
     },
 
     {
@@ -214,19 +203,15 @@ export class UsersComponent implements OnInit {
       filter: false,
 
       cellRenderer: (params: ICellRendererParams) => {
-
         const user = params.data;
 
-        const userId =
-          user?.user_id ||
-          user?.userId;
+        const userId = user?.user_id || user?.userId;
 
         if (!userId) {
           return "";
         }
 
-        const isDeleted =
-          user?.status === "DELETED";
+        const isDeleted = user?.status === "DELETED";
 
         if (isDeleted) {
           return `
@@ -274,18 +259,15 @@ export class UsersComponent implements OnInit {
       },
 
       onCellClicked: (params) => {
-        const target =
-          params.event?.target as HTMLElement;
+        const target = params.event?.target as HTMLElement;
         if (!target) {
           return;
         }
-        const action =
-          target.getAttribute("data-action");
+        const action = target.getAttribute("data-action");
         if (!action) {
           return;
         }
         switch (action) {
-
           case "view":
             this.select(params.data);
             break;
@@ -347,7 +329,6 @@ export class UsersComponent implements OnInit {
   // =========================================================
 
   load(): void {
-
     this.loading = true;
 
     this.api
@@ -358,9 +339,7 @@ export class UsersComponent implements OnInit {
         status: this.status,
       })
       .subscribe({
-
         next: (response) => {
-
           this.rows =
             response?.data?.items ||
             response?.items ||
@@ -372,10 +351,7 @@ export class UsersComponent implements OnInit {
 
           // Refresh AG Grid
           if (this.gridApi) {
-            this.gridApi.setGridOption(
-              "rowData",
-              this.rows,
-            );
+            this.gridApi.setGridOption("rowData", this.rows);
 
             setTimeout(() => {
               this.gridApi.sizeColumnsToFit();
@@ -384,18 +360,11 @@ export class UsersComponent implements OnInit {
         },
 
         error: (error) => {
-
           this.loading = false;
 
-          console.error(
-            "Failed to load users:",
-            error,
-          );
+          console.error("Failed to load users:", error);
 
-          this.ui.show(
-            error?.error?.message ||
-            "Failed to load users",
-          );
+          this.ui.show(error?.error?.message || "Failed to load users");
         },
       });
   }
@@ -405,11 +374,8 @@ export class UsersComponent implements OnInit {
   // =========================================================
 
   openCreate(): void {
-
     this.editMode = false;
-
     this.resetForm();
-
     this.formOpen = true;
   }
 
@@ -418,16 +384,10 @@ export class UsersComponent implements OnInit {
   // =========================================================
 
   openEdit(user: any): void {
-
-    const userId =
-      user?.user_id ||
-      user?.userId;
+    const userId = user?.user_id || user?.userId;
 
     if (!userId) {
-
-      this.ui.show(
-        "Invalid user ID",
-      );
+      this.ui.show("Invalid user ID");
 
       return;
     }
@@ -435,49 +395,26 @@ export class UsersComponent implements OnInit {
     this.editMode = true;
 
     this.form = {
-
       userId,
 
-      username:
-        user?.username || "",
+      username: user?.username || "",
 
-      email:
-        user?.email || "",
+      email: user?.email || "",
 
-      firstName:
-        user?.first_name ||
-        user?.firstName ||
-        "",
+      firstName: user?.first_name || user?.firstName || "",
 
-      middleName:
-        user?.middle_name ||
-        user?.middleName ||
-        "",
+      middleName: user?.middle_name || user?.middleName || "",
 
-      lastName:
-        user?.last_name ||
-        user?.lastName ||
-        "",
+      lastName: user?.last_name || user?.lastName || "",
 
-      displayName:
-        user?.display_name ||
-        user?.displayName ||
-        "",
+      displayName: user?.display_name || user?.displayName || "",
 
       phoneCountryCode:
-        user?.phone_country_code ||
-        user?.phoneCountryCode ||
-        "",
+        user?.phone_country_code || user?.phoneCountryCode || "",
 
-      phoneNumber:
-        user?.phone_number ||
-        user?.phoneNumber ||
-        "",
+      phoneNumber: user?.phone_number || user?.phoneNumber || "",
 
-      userType:
-        user?.user_type ||
-        user?.userType ||
-        "USER",
+      userType: user?.user_type || user?.userType || "USER",
     };
 
     this.formOpen = true;
@@ -488,7 +425,6 @@ export class UsersComponent implements OnInit {
   // =========================================================
 
   closeCreate(): void {
-
     if (this.saving) {
       return;
     }
@@ -505,31 +441,21 @@ export class UsersComponent implements OnInit {
   // =========================================================
 
   save(): void {
-
     if (!this.validateForm()) {
       return;
     }
 
     this.saving = true;
     const request = {
-      username:
-        this.form.username.trim(),
-      email:
-        this.form.email.trim(),
-      firstName:
-        this.form.firstName.trim(),
-      middleName:
-        this.form.middleName.trim(),
-      lastName:
-        this.form.lastName.trim(),
-      displayName:
-        this.form.displayName.trim(),
-      phoneCountryCode:
-        this.form.phoneCountryCode.trim(),
-      phoneNumber:
-        this.form.phoneNumber.trim(),
-      userType:
-        this.form.userType,
+      username: this.form.username.trim(),
+      email: this.form.email.trim(),
+      firstName: this.form.firstName.trim(),
+      middleName: this.form.middleName.trim(),
+      lastName: this.form.lastName.trim(),
+      displayName: this.form.displayName.trim(),
+      phoneCountryCode: this.form.phoneCountryCode.trim(),
+      phoneNumber: this.form.phoneNumber.trim(),
+      userType: this.form.userType,
     };
 
     // =======================================================
@@ -537,47 +463,42 @@ export class UsersComponent implements OnInit {
     // =======================================================
 
     if (this.editMode) {
-      const userId =
-        this.form.userId;
+      const userId = this.form.userId;
 
       if (!userId) {
         this.saving = false;
-        this.ui.show(
-          "Invalid user ID",
-        );
+        this.ui.show("Invalid user ID");
         return;
       }
 
-      this.api
-        .patch<any>(
-          `/users/${userId}`,
-          request,
-        )
-        .subscribe({
-          next: () => {
-            this.saving = false;
-            this.formOpen = false;
-            this.editMode = false;
-            this.resetForm();
-            this.ui.show(
-              "User updated successfully",
-            );
-            this.load();
-          },
+      this.api.patch<any>(`/users/${userId}`, request).subscribe({
+        next: () => {
+          this.saving = false;
+          this.formOpen = false;
+          this.editMode = false;
+          this.resetForm();
+          this.notificationModal.open({
+            type: "SUCCESS",
+            title: "User Updated",
+            message: "User updated successfully.",
+            contentType: "TEXT",
+          });
+          //this.ui.show("User updated successfully");
+          this.load();
+        },
 
-          error: (error) => {
-            this.saving = false;
-            console.error(
-              "Failed to update user:",
-              error,
-            );
-
-            this.ui.show(
-              error?.error?.message ||
-              "Failed to update user",
-            );
-          },
-        });
+        error: (error) => {
+          this.saving = false;
+          console.error("Failed to update user:", error?.error?.error);
+          this.notificationModal.open({
+            type: "ERROR",
+            title: "User Updation Failed",
+            message: error?.error?.error.code +"\n"+error?.error?.error.details[0],
+            contentType: "TEXT",
+          });
+          //this.ui.show(error?.error?.message || "Failed to update user");
+        },
+      });
 
       return;
     }
@@ -586,43 +507,27 @@ export class UsersComponent implements OnInit {
     // CREATE
     // =======================================================
 
-    this.api
-      .post<any>(
-        "/users",
-        request,
-      )
-      .subscribe({
+    this.api.post<any>("/users", request).subscribe({
+      next: () => {
+        this.saving = false;
 
-        next: () => {
+        this.formOpen = false;
 
-          this.saving = false;
+        this.resetForm();
 
-          this.formOpen = false;
+        this.ui.show("User created successfully");
 
-          this.resetForm();
+        this.load();
+      },
 
-          this.ui.show(
-            "User created successfully",
-          );
+      error: (error) => {
+        this.saving = false;
 
-          this.load();
-        },
+        console.error("Failed to create user:", error);
 
-        error: (error) => {
-
-          this.saving = false;
-
-          console.error(
-            "Failed to create user:",
-            error,
-          );
-
-          this.ui.show(
-            error?.error?.message ||
-            "Failed to create user",
-          );
-        },
-      });
+        this.ui.show(error?.error?.message || "Failed to create user");
+      },
+    });
   }
 
   // =========================================================
@@ -630,17 +535,12 @@ export class UsersComponent implements OnInit {
   // =========================================================
 
   deleteUser(user: any): void {
-    const userId =
-      user?.user_id ||
-      user?.userId;
+    const userId = user?.user_id || user?.userId;
     if (!userId) {
-      this.ui.show(
-        "Invalid user ID",
-      );
+      this.ui.show("Invalid user ID");
       return;
     }
-    const userName =
-      this.getUserName(user);
+    const userName = this.getUserName(user);
     this.pendingDeleteUser = user;
 
     this.confirmModal.open({
@@ -652,7 +552,7 @@ export class UsersComponent implements OnInit {
       cancelText: "Cancel",
     });
   }
-  
+
   /**
    * Bound to the confirm-modal's (confirmed) output.
    * Runs the actual soft-delete once the user confirms.
@@ -673,35 +573,24 @@ export class UsersComponent implements OnInit {
 
     this.deleting = true;
     this.api
-      .patch<any>(
-        `/users/${userId}/status`,
-        {
-          status: "DELETED",
-        },
-      )
+      .patch<any>(`/users/${userId}/status`, {
+        status: "DELETED",
+      })
       .subscribe({
         next: () => {
           this.deleting = false;
-          this.ui.show(
-            "User deleted successfully",
-          );
+          this.ui.show("User deleted successfully");
           this.load();
         },
         error: (error) => {
           this.deleting = false;
-          console.error(
-            "Failed to delete user:",
-            error,
-          );
-          this.ui.show(
-            error?.error?.message ||
-            "Failed to delete user",
-          );
+          console.error("Failed to delete user:", error);
+          this.ui.show(error?.error?.message || "Failed to delete user");
         },
       });
   }
 
-    /**
+  /**
    * Bound to the confirm-modal's (cancelled) output.
    */
   onDeleteUserCancelled(): void {
@@ -713,52 +602,31 @@ export class UsersComponent implements OnInit {
   // =========================================================
 
   select(user: any): void {
-
-    const userId =
-      user?.user_id ||
-      user?.userId;
+    const userId = user?.user_id || user?.userId;
 
     if (!userId) {
-
-      this.ui.show(
-        "Invalid user ID",
-      );
+      this.ui.show("Invalid user ID");
 
       return;
     }
 
     this.loading = true;
 
-    this.api
-      .get<any>(
-        `/users/${userId}`,
-      )
-      .subscribe({
+    this.api.get<any>(`/users/${userId}`).subscribe({
+      next: (response) => {
+        this.selected = response?.data || response;
 
-        next: (response) => {
+        this.loading = false;
+      },
 
-          this.selected =
-            response?.data ||
-            response;
+      error: (error) => {
+        this.loading = false;
 
-          this.loading = false;
-        },
+        console.error("Failed to load user:", error);
 
-        error: (error) => {
-
-          this.loading = false;
-
-          console.error(
-            "Failed to load user:",
-            error,
-          );
-
-          this.ui.show(
-            error?.error?.message ||
-            "Failed to load user details",
-          );
-        },
-      });
+        this.ui.show(error?.error?.message || "Failed to load user details");
+      },
+    });
   }
 
   // =========================================================
@@ -774,48 +642,32 @@ export class UsersComponent implements OnInit {
   // =========================================================
 
   validateForm(): boolean {
-
     if (!this.form.username.trim()) {
-
-      this.ui.show(
-        "Username is required",
-      );
+      this.ui.show("Username is required");
 
       return false;
     }
 
     if (!this.form.email.trim()) {
-
-      this.ui.show(
-        "Email is required",
-      );
+      this.ui.show("Email is required");
 
       return false;
     }
 
     if (!this.form.firstName.trim()) {
-
-      this.ui.show(
-        "First name is required",
-      );
+      this.ui.show("First name is required");
 
       return false;
     }
 
     if (!this.form.lastName.trim()) {
-
-      this.ui.show(
-        "Last name is required",
-      );
+      this.ui.show("Last name is required");
 
       return false;
     }
 
     if (!this.form.userType) {
-
-      this.ui.show(
-        "User type is required",
-      );
+      this.ui.show("User type is required");
 
       return false;
     }
@@ -828,38 +680,19 @@ export class UsersComponent implements OnInit {
   // =========================================================
 
   getUserName(user: any): string {
+    const firstName = user?.first_name || user?.firstName || "";
 
-    const firstName =
-      user?.first_name ||
-      user?.firstName ||
-      "";
+    const middleName = user?.middle_name || user?.middleName || "";
 
-    const middleName =
-      user?.middle_name ||
-      user?.middleName ||
-      "";
+    const lastName = user?.last_name || user?.lastName || "";
 
-    const lastName =
-      user?.last_name ||
-      user?.lastName ||
-      "";
+    const displayName = user?.display_name || user?.displayName || "";
 
-    const displayName =
-      user?.display_name ||
-      user?.displayName ||
-      "";
+    const fullName = `${firstName} ${middleName} ${lastName}`
+      .replace(/\s+/g, " ")
+      .trim();
 
-    const fullName =
-      `${firstName} ${middleName} ${lastName}`
-        .replace(/\s+/g, " ")
-        .trim();
-
-    return (
-      displayName ||
-      fullName ||
-      user?.username ||
-      "—"
-    );
+    return displayName || fullName || user?.username || "—";
   }
 
   // =========================================================
@@ -867,12 +700,7 @@ export class UsersComponent implements OnInit {
   // =========================================================
 
   getUserType(user: any): string {
-
-    return (
-      user?.user_type ||
-      user?.userType ||
-      "USER"
-    );
+    return user?.user_type || user?.userType || "USER";
   }
 
   // =========================================================
@@ -880,13 +708,7 @@ export class UsersComponent implements OnInit {
   // =========================================================
 
   getCreatedDate(user: any): string {
-
-    return (
-      user?.created_on ||
-      user?.createdOn ||
-      user?.createdAt ||
-      "—"
-    );
+    return user?.created_on || user?.createdOn || user?.createdAt || "—";
   }
 
   // =========================================================
@@ -894,9 +716,7 @@ export class UsersComponent implements OnInit {
   // =========================================================
 
   resetForm(): void {
-
     this.form = {
-
       userId: null,
 
       username: "",
@@ -924,7 +744,6 @@ export class UsersComponent implements OnInit {
   // =========================================================
 
   private escapeHtml(value: any): string {
-
     if (value === null || value === undefined) {
       return "";
     }
