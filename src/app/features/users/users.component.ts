@@ -58,10 +58,13 @@ export class UsersComponent implements OnInit {
   @ViewChild("confirmModal")
   confirmModal!: ConfirmModalComponent;
 
+  private pendingDeleteUser: any = null;
+  // =========================================================
+  // NOTIFICATION MODAL
+  // =========================================================
+
   @ViewChild("notificationModal")
   notificationModal!: NotificationModalComponent;
-
-  private pendingDeleteUser: any = null;
 
   // =========================================================
   // CREATE / EDIT
@@ -361,10 +364,14 @@ export class UsersComponent implements OnInit {
 
         error: (error) => {
           this.loading = false;
-
           console.error("Failed to load users:", error);
-
-          this.ui.show(error?.error?.message || "Failed to load users");
+          this.notificationModal.open({
+            type: "ERROR",
+            title: "Failed to load users",
+            message: error,
+            contentType: "TEXT",
+            autoCloseAfter: 3000,
+          });
         },
       });
   }
@@ -387,33 +394,28 @@ export class UsersComponent implements OnInit {
     const userId = user?.user_id || user?.userId;
 
     if (!userId) {
-      this.ui.show("Invalid user ID");
-
+      this.notificationModal.open({
+        type: "WARNING",
+        title: "Failed to edit users",
+        message: "Invalid user ID",
+        contentType: "TEXT",
+        autoCloseAfter: 3000,
+      });
       return;
     }
 
     this.editMode = true;
-
     this.form = {
       userId,
-
       username: user?.username || "",
-
       email: user?.email || "",
-
       firstName: user?.first_name || user?.firstName || "",
-
       middleName: user?.middle_name || user?.middleName || "",
-
       lastName: user?.last_name || user?.lastName || "",
-
       displayName: user?.display_name || user?.displayName || "",
-
       phoneCountryCode:
         user?.phone_country_code || user?.phoneCountryCode || "",
-
       phoneNumber: user?.phone_number || user?.phoneNumber || "",
-
       userType: user?.user_type || user?.userType || "USER",
     };
 
@@ -430,9 +432,7 @@ export class UsersComponent implements OnInit {
     }
 
     this.formOpen = false;
-
     this.editMode = false;
-
     this.resetForm();
   }
 
@@ -482,21 +482,20 @@ export class UsersComponent implements OnInit {
             title: "User Updated",
             message: "User updated successfully.",
             contentType: "TEXT",
+            autoCloseAfter: 3000,
           });
-          //this.ui.show("User updated successfully");
           this.load();
         },
-
         error: (error) => {
           this.saving = false;
-          console.error("Failed to update user:", error?.error?.error);
+          console.error("Failed to update user:", error);
           this.notificationModal.open({
             type: "ERROR",
             title: "User Updation Failed",
-            message: error?.error?.error.code +"\n"+error?.error?.error.details[0],
+            message: error,
             contentType: "TEXT",
+            autoCloseAfter: 3000,
           });
-          //this.ui.show(error?.error?.message || "Failed to update user");
         },
       });
 
@@ -510,22 +509,28 @@ export class UsersComponent implements OnInit {
     this.api.post<any>("/users", request).subscribe({
       next: () => {
         this.saving = false;
-
         this.formOpen = false;
-
         this.resetForm();
-
-        this.ui.show("User created successfully");
-
+        this.notificationModal.open({
+          type: "SUCCESS",
+          title: "User Created",
+          message: "User created successfully.",
+          contentType: "TEXT",
+          autoCloseAfter: 3000,
+        });
         this.load();
       },
 
       error: (error) => {
         this.saving = false;
-
         console.error("Failed to create user:", error);
-
-        this.ui.show(error?.error?.message || "Failed to create user");
+        this.notificationModal.open({
+          type: "ERROR",
+          title: "User creation Failed",
+          message: error,
+          contentType: "TEXT",
+          autoCloseAfter: 3000,
+        });
       },
     });
   }
@@ -537,7 +542,13 @@ export class UsersComponent implements OnInit {
   deleteUser(user: any): void {
     const userId = user?.user_id || user?.userId;
     if (!userId) {
-      this.ui.show("Invalid user ID");
+      this.notificationModal.open({
+        type: "WARNING",
+        title: "User deletion",
+        message: "Invalid user ID",
+        contentType: "TEXT",
+        autoCloseAfter: 3000,
+      });
       return;
     }
     const userName = this.getUserName(user);
@@ -579,13 +590,25 @@ export class UsersComponent implements OnInit {
       .subscribe({
         next: () => {
           this.deleting = false;
-          this.ui.show("User deleted successfully");
+          this.notificationModal.open({
+            type: "SUCCESS",
+            title: "User deletion",
+            message: "User deleted successfully",
+            contentType: "TEXT",
+            autoCloseAfter: 3000,
+          });
           this.load();
         },
         error: (error) => {
           this.deleting = false;
           console.error("Failed to delete user:", error);
-          this.ui.show(error?.error?.message || "Failed to delete user");
+          this.notificationModal.open({
+            type: "ERROR",
+            title: "User deletion",
+            message: "Failed to delete user",
+            contentType: "TEXT",
+            autoCloseAfter: 3000,
+          });
         },
       });
   }
@@ -605,8 +628,13 @@ export class UsersComponent implements OnInit {
     const userId = user?.user_id || user?.userId;
 
     if (!userId) {
-      this.ui.show("Invalid user ID");
-
+      this.notificationModal.open({
+        type: "WARNING",
+        title: "User loading",
+        message: "Invalid user ID",
+        contentType: "TEXT",
+        autoCloseAfter: 3000,
+      });
       return;
     }
 
@@ -615,16 +643,19 @@ export class UsersComponent implements OnInit {
     this.api.get<any>(`/users/${userId}`).subscribe({
       next: (response) => {
         this.selected = response?.data || response;
-
         this.loading = false;
       },
 
       error: (error) => {
         this.loading = false;
-
         console.error("Failed to load user:", error);
-
-        this.ui.show(error?.error?.message || "Failed to load user details");
+        this.notificationModal.open({
+          type: "ERROR",
+          title: "User loading",
+          message: error,
+          contentType: "TEXT",
+          autoCloseAfter: 3000,
+        });
       },
     });
   }
@@ -644,31 +675,26 @@ export class UsersComponent implements OnInit {
   validateForm(): boolean {
     if (!this.form.username.trim()) {
       this.ui.show("Username is required");
-
       return false;
     }
 
     if (!this.form.email.trim()) {
       this.ui.show("Email is required");
-
       return false;
     }
 
     if (!this.form.firstName.trim()) {
       this.ui.show("First name is required");
-
       return false;
     }
 
     if (!this.form.lastName.trim()) {
       this.ui.show("Last name is required");
-
       return false;
     }
 
     if (!this.form.userType) {
       this.ui.show("User type is required");
-
       return false;
     }
 
@@ -681,13 +707,9 @@ export class UsersComponent implements OnInit {
 
   getUserName(user: any): string {
     const firstName = user?.first_name || user?.firstName || "";
-
     const middleName = user?.middle_name || user?.middleName || "";
-
     const lastName = user?.last_name || user?.lastName || "";
-
     const displayName = user?.display_name || user?.displayName || "";
-
     const fullName = `${firstName} ${middleName} ${lastName}`
       .replace(/\s+/g, " ")
       .trim();
@@ -718,23 +740,14 @@ export class UsersComponent implements OnInit {
   resetForm(): void {
     this.form = {
       userId: null,
-
       username: "",
-
       email: "",
-
       firstName: "",
-
       middleName: "",
-
       lastName: "",
-
       displayName: "",
-
       phoneCountryCode: "",
-
       phoneNumber: "",
-
       userType: "USER",
     };
   }

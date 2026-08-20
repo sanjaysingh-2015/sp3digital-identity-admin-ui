@@ -513,10 +513,9 @@ button:disabled {
 
 .checkbox-label {
   flex-direction: row;
-
   align-items: center;
-
   gap: 9px;
+  margin-bottom: 0px !important;
 }
 
 .checkbox-label input[type="checkbox"] {
@@ -529,6 +528,26 @@ button:disabled {
   cursor: pointer;
 }
 
+input:disabled,
+textarea:disabled,
+select:disabled {
+  background-color: #e5e7eb;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+/* Placeholder text for disabled inputs */
+input:disabled::placeholder,
+textarea:disabled::placeholder {
+  color: #9ca3af;
+}
+
+/* Disabled select option/text */
+select:disabled {
+  color: #6b7280;
+}
 
 /* =========================================================
    MODAL ACTIONS

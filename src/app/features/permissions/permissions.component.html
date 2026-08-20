@@ -1,14 +1,6 @@
-<app-page
-  eyebrow="AUTHORIZATION"
-  title="Permissions"
-  description="Define reusable RBAC permissions and assign permissions."
->
-  <button
-    actions
-    type="button"
-    class="primary"
-    (click)="openCreate()"
-  >
+<app-page eyebrow="AUTHORIZATION" title="Permissions"
+  description="Define reusable RBAC permissions and assign permissions.">
+  <button actions type="button" class="primary" (click)="openCreate()">
     + Create permission
   </button>
 </app-page>
@@ -17,14 +9,8 @@
      AG GRID
 ========================================================= -->
 <div class="panel grid-panel">
-  <ag-grid-angular
-    class="permissions-grid"
-    [rowData]="rows"
-    [columnDefs]="columnDefs"
-    [defaultColDef]="defaultColDef"
-    [gridOptions]="gridOptions"
-    (gridReady)="onGridReady($event)"
-  >
+  <ag-grid-angular class="permissions-grid" [rowData]="rows" [columnDefs]="columnDefs" [defaultColDef]="defaultColDef"
+    [gridOptions]="gridOptions" (gridReady)="onGridReady($event)">
   </ag-grid-angular>
 </div>
 
@@ -33,413 +19,363 @@
 ========================================================= -->
 
 @if (formOpen) {
-  <div
-    class="modal-backdrop"
-    (click)="closeCreate()"
-  >
-    <div
-      class="modal permission-form-modal"
-      (click)="$event.stopPropagation()"
-    >
-      <div class="modal-header">
-        <div>
-          <h3>
-            @if (editMode) {
-              Edit permission
-            } @else {
-              Create permission
-            }
-          </h3>
-          <p>
-            @if (editMode) {
-              Update the RBAC permission information.
-            } @else {
-              Create a reusable RBAC permission.
-            }
-          </p>
-        </div>
-        <button
-          type="button"
-          class="modal-close"
-          (click)="closeCreate()"
-          aria-label="Close"
-        >
-          ×
-        </button>
+<div class="modal-backdrop" (click)="closeCreate()">
+  <div class="modal permission-form-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <h3>
+          @if (editMode) {
+          Edit permission
+          } @else {
+          Create permission
+          }
+        </h3>
+        <p>
+          @if (editMode) {
+          Update the RBAC permission information.
+          } @else {
+          Create a reusable RBAC permission.
+          }
+        </p>
       </div>
+      <button type="button" class="modal-close" (click)="closeCreate()" aria-label="Close">
+        ×
+      </button>
+    </div>
 
-      <!-- ===================================================
+    <!-- ===================================================
            PERMISSION FORM
       ==================================================== -->
-      <div class="form-grid">
-        <!-- Permission Name -->
-        <label class="full-width">
-          <span>
-            Permission name <b>*</b>
-          </span>
-          <input
-            type="text"
-            [(ngModel)]="form.permissionName"
-            placeholder="e.g. Identity Administrator"
-            autocomplete="off"
-          />
-        </label>
+    <div class="form-grid">
+      <!-- Permission Code -->
+      @if (editMode) {
+      <label class="full-width">
+        <span>
+          Permission Code <b>*</b>
+        </span>
 
-        <!-- Resource Category -->
-        <label>
-          <span>
-            Resource category <b>*</b>
-          </span>
-          <select
-            [(ngModel)]="form.resourceCategory"
-            (change)="onResourceCategoryChange()"
-            [disabled]="loadingResourceCategories"
-          >
-            <option value="">
-              @if (loadingResourceCategories) {
-                Loading categories...
-              } @else {
-                Select a resource category
-              }
-            </option>
-            @for (
-              category of resourceCategories;
-              track category
-            ) {
-              <option [value]="category">
-                {{ formatLabel(category) }}
-              </option>
-            }
-          </select>
-        </label>
+        <input type="text" [value]="form.resourceCategory + ':' + form.resource + ':' + form.action" [disabled]="editMode" />
+      </label>
+      }
+      <!-- Permission Name -->
+      <label class="full-width">
+        <span>
+          Permission name <b>*</b>
+        </span>
+        <input type="text" [(ngModel)]="form.permissionName" placeholder="e.g. Identity Administrator"
+          autocomplete="off" />
+      </label>
 
-        <!-- Resource (single-select in edit mode, multi-select in create mode) -->
-        <label>
-          <span>
-            Resource <b>*</b>
-          </span>
-
-          @if (editMode) {
-            <select
-              [(ngModel)]="form.resource"
-              [disabled]="!form.resourceCategory || loadingResources"
-            >
-              <option value="">
-                @if (loadingResources) {
-                  Loading resources...
-                } @else {
-                  Select a resource
-                }
-              </option>
-              @for (
-                resource of resourceOptions;
-                track resource.resourceCode
-              ) {
-                <option [value]="resource.resourceCode">
-                  {{ resource.resourceName }}
-                </option>
-              }
-            </select>
-          } @else {
-            <select
-              multiple
-              [(ngModel)]="form.resources"
-              [disabled]="!form.resourceCategory || loadingResources"
-              class="multi-select"
-            >
-              @if (loadingResources) {
-                <option disabled>Loading resources...</option>
-              } @else if (!form.resourceCategory) {
-                <option disabled>Select a resource category first</option>
-              } @else if (!resourceOptions.length) {
-                <option disabled>No resources found</option>
-              }
-              @for (
-                resource of resourceOptions;
-                track resource.resourceCode
-              ) {
-                <option [value]="resource.resourceCode">
-                  {{ resource.resourceName }}
-                </option>
-              }
-            </select>
-            <small class="field-hint">
-              Hold Ctrl / Cmd to select multiple.
-            </small>
-          }
-        </label>
-
-        <!-- Action Category -->
-        <label>
-          <span>
-            Action category <b>*</b>
-          </span>
-          <select
-            [(ngModel)]="form.actionCategory"
-            (change)="onActionCategoryChange()"
-            [disabled]="loadingActionCategories"
-          >
-            <option value="">
-              @if (loadingActionCategories) {
-                Loading categories...
-              } @else {
-                Select an action category
-              }
-            </option>
-            @for (
-              category of actionCategories;
-              track category
-            ) {
-              <option [value]="category">
-                {{ formatLabel(category) }}
-              </option>
-            }
-          </select>
-        </label>
-
-        <!-- Action (single-select in edit mode, multi-select in create mode) -->
-        <label>
-          <span>
-            Action <b>*</b>
-          </span>
-
-          @if (editMode) {
-            <select
-              [(ngModel)]="form.action"
-              [disabled]="!form.actionCategory || loadingActions"
-            >
-              <option value="">
-                @if (loadingActions) {
-                  Loading actions...
-                } @else {
-                  Select an action
-                }
-              </option>
-              @for (
-                action of actionOptions;
-                track action.actionCode
-              ) {
-                <option [value]="action.actionCode">
-                  {{ action.actionName }}
-                </option>
-              }
-            </select>
-          } @else {
-            <select
-              multiple
-              [(ngModel)]="form.actions"
-              [disabled]="!form.actionCategory || loadingActions"
-              class="multi-select"
-            >
-              @if (loadingActions) {
-                <option disabled>Loading actions...</option>
-              } @else if (!form.actionCategory) {
-                <option disabled>Select an action category first</option>
-              } @else if (!actionOptions.length) {
-                <option disabled>No actions found</option>
-              }
-              @for (
-                action of actionOptions;
-                track action.actionCode
-              ) {
-                <option [value]="action.actionCode">
-                  {{ action.actionName }}
-                </option>
-              }
-            </select>
-            <small class="field-hint">
-              Hold Ctrl / Cmd to select multiple.
-            </small>
-          }
-        </label>
-
-        <!-- Description -->
-        <label class="full-width">
-          <span>
-            Description
-          </span>
-          <textarea
-            [(ngModel)]="form.description"
-            rows="4"
-            placeholder="Enter permission description"
-          ></textarea>
-        </label>
-
-        <!-- Force Save -->
-        <label class="full-width checkbox-label">
-          <input
-            type="checkbox"
-            [(ngModel)]="form.allowDuplicates"
-          />
-          <span>
-            Force Save
-          </span>
-        </label>
-      </div>
-      <!-- Actions -->
-      <div class="modal-actions">
-        <button
-          type="button"
-          class="secondary"
-          (click)="closeCreate()"
-          [disabled]="saving"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          class="primary"
-          (click)="save()"
-          [disabled]="saving"
-        >
-          @if (saving) {
-            @if (editMode) {
-              Updating...
+      <!-- Resource Category -->
+      <label>
+        <span>
+          Resource category <b>*</b>
+        </span>
+        <select [(ngModel)]="form.resourceCategory" (change)="onResourceCategoryChange()"
+          [disabled]="loadingResourceCategories || editMode">
+          <option value="">
+            @if (loadingResourceCategories) {
+            Loading categories...
             } @else {
-              Creating...
+            Select a resource category
             }
-          } @else {
-            @if (editMode) {
-              Update
-            } @else {
-              Create
-            }
+          </option>
+          @for (
+          category of resourceCategories;
+          track category
+          ) {
+          <option [value]="category">
+            {{ formatLabel(category) }}
+          </option>
           }
-        </button>
-      </div>
+        </select>
+      </label>
+
+      <!-- Resource (single-select in edit mode, multi-select in create mode) -->
+      <label>
+        <span>
+          Resource <b>*</b>
+        </span>
+
+        @if (editMode) {
+        <select [(ngModel)]="form.resource" [disabled]="!form.resourceCategory || loadingResources || editMode">
+          <option value="">
+            @if (loadingResources) {
+            Loading resources...
+            } @else {
+            Select a resource
+            }
+          </option>
+          @for (
+          resource of resourceOptions;
+          track resource.resourceCode
+          ) {
+          <option [value]="resource.resourceCode">
+            {{ resource.resourceName }}
+          </option>
+          }
+        </select>
+        } @else {
+        <select multiple [(ngModel)]="form.resources" [disabled]="!form.resourceCategory || loadingResources"
+          class="multi-select">
+          @if (loadingResources) {
+          <option disabled>Loading resources...</option>
+          } @else if (!form.resourceCategory) {
+          <option disabled>Select a resource category first</option>
+          } @else if (!resourceOptions.length) {
+          <option disabled>No resources found</option>
+          }
+          @for (
+          resource of resourceOptions;
+          track resource.resourceCode
+          ) {
+          <option [value]="resource.resourceCode">
+            {{ resource.resourceName }}
+          </option>
+          }
+        </select>
+        <small class="field-hint">
+          Hold Ctrl / Cmd to select multiple.
+        </small>
+        }
+      </label>
+
+      <!-- Action Category -->
+      <label>
+        <span>
+          Action category <b>*</b>
+        </span>
+        <select [(ngModel)]="form.actionCategory" (change)="onActionCategoryChange()"
+          [disabled]="loadingActionCategories || editMode">
+          <option value="">
+            @if (loadingActionCategories) {
+            Loading categories...
+            } @else {
+            Select an action category
+            }
+          </option>
+          @for (
+          category of actionCategories;
+          track category
+          ) {
+          <option [value]="category">
+            {{ formatLabel(category) }}
+          </option>
+          }
+        </select>
+      </label>
+
+      <!-- Action (single-select in edit mode, multi-select in create mode) -->
+      <label>
+        <span>
+          Action <b>*</b>
+        </span>
+
+        @if (editMode) {
+        <select [(ngModel)]="form.action" [disabled]="!form.actionCategory || loadingActions || editMode">
+          <option value="">
+            @if (loadingActions) {
+            Loading actions...
+            } @else {
+            Select an action
+            }
+          </option>
+          @for (
+          action of actionOptions;
+          track action.actionCode
+          ) {
+          <option [value]="action.actionCode">
+            {{ action.actionName }}
+          </option>
+          }
+        </select>
+        } @else {
+        <select multiple [(ngModel)]="form.actions" [disabled]="!form.actionCategory || loadingActions"
+          class="multi-select">
+          @if (loadingActions) {
+          <option disabled>Loading actions...</option>
+          } @else if (!form.actionCategory) {
+          <option disabled>Select an action category first</option>
+          } @else if (!actionOptions.length) {
+          <option disabled>No actions found</option>
+          }
+          @for (
+          action of actionOptions;
+          track action.actionCode
+          ) {
+          <option [value]="action.actionCode">
+            {{ action.actionName }}
+          </option>
+          }
+        </select>
+        <small class="field-hint">
+          Hold Ctrl / Cmd to select multiple.
+        </small>
+        }
+      </label>
+
+      <!-- Description -->
+      <label class="full-width">
+        <span>
+          Description
+        </span>
+        <textarea [(ngModel)]="form.description" rows="4" placeholder="Enter permission description"></textarea>
+      </label>
+    </div>
+    <!-- Actions -->
+    <div class="modal-actions">
+      <!-- Force Save -->
+      <label class="full-width checkbox-label">
+        <input type="checkbox" [(ngModel)]="form.allowDuplicates" />
+        <span>
+          Force Save
+        </span>
+      </label>
+      <button type="button" class="secondary" (click)="closeCreate()" [disabled]="saving">
+        Cancel
+      </button>
+      <button type="button" class="primary" (click)="save()" [disabled]="saving">
+        @if (saving) {
+        @if (editMode) {
+        Updating...
+        } @else {
+        Creating...
+        }
+        } @else {
+        @if (editMode) {
+        Update
+        } @else {
+        Create
+        }
+        }
+      </button>
     </div>
   </div>
+</div>
 }
 
 <!-- =========================================================
      PERMISSION DETAILS MODAL
 ========================================================= -->
 @if (selected) {
-  <div
-    class="modal-backdrop"
-    (click)="closeDetails()"
-  >
-    <div
-      class="modal details-modal"
-      (click)="$event.stopPropagation()"
-    >
-      <div class="modal-header">
-        <div>
-          <h3>
-            Permission details
-          </h3>
-          <p>
-            RBAC permission information.
-          </p>
-        </div>
-        <button
-          type="button"
-          class="modal-close"
-          (click)="closeDetails()"
-          aria-label="Close"
-        >
-          ×
-        </button>
+<div class="modal-backdrop" (click)="closeDetails()">
+  <div class="modal details-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <h3>
+          Permission details
+        </h3>
+        <p>
+          RBAC permission information.
+        </p>
       </div>
+      <button type="button" class="modal-close" (click)="closeDetails()" aria-label="Close">
+        ×
+      </button>
+    </div>
 
-      <!-- Permission summary -->
-      <div class="permission-summary">
-        <div class="summary-item">
-          <span>Permission Name</span>
-          <strong>
-            {{
-              selected.permission_name ||
-              selected.permissionName ||
-              "—"
-            }}
-          </strong>
-        </div>
-        <div class="summary-item">
-          <span>Resource Category</span>
-          <strong>
-            {{
-              formatLabel(
-                selected.resource_category ||
-                selected.resourceCategory
-              )
-            }}
-          </strong>
-        </div>
-        <div class="summary-item">
-          <span>Resource</span>
-          <select disabled class="view-select">
-            <option selected>
-              {{ resourceDisplayLabel(selected) }}
-            </option>
-          </select>
-        </div>
-        <div class="summary-item">
-          <span>Action Category</span>
-          <strong>
-            {{
-              formatLabel(
-                selected.action_category ||
-                selected.actionCategory
-              )
-            }}
-          </strong>
-        </div>
-        <div class="summary-item">
-          <span>Action</span>
-          <select disabled class="view-select">
-            <option selected>
-              {{ actionDisplayLabel(selected) }}
-            </option>
-          </select>
-        </div>
-        <div class="summary-item full-width">
-          <span>Description</span>
-          <strong>
-            {{ selected.description || "—" }}
-          </strong>
-        </div>
-        <div class="summary-item">
-          <span>
-            Status
-          </span>
-          <span
-            class="badge"
-            [class.good]="selected.status === 'ACTIVE'"
-            [class.warning]="selected.status === 'SUSPENDED'"
-            [class.danger]="
+    <!-- Permission summary -->
+    <div class="permission-summary">
+      <div class="summary-item">
+        <span>Permission Code</span>
+        <strong>
+          {{
+          (selected.resource_category || selected.resourceCategory || "") + ":" +
+          (selected.resource || "") + ":" + (selected.action || "")
+          }}
+        </strong>
+      </div>
+      <div class="summary-item">
+        <span>Permission Name</span>
+        <strong>
+          {{
+          selected.permission_name ||
+          selected.permissionName ||
+          "—"
+          }}
+        </strong>
+      </div>
+      <div class="summary-item">
+        <span>Resource Category</span>
+        <strong>
+          {{
+          formatLabel(
+          selected.resource_category ||
+          selected.resourceCategory
+          )
+          }}
+        </strong>
+      </div>
+      <div class="summary-item">
+        <span>Resource</span>
+        <select disabled class="view-select">
+          <option selected>
+            {{ resourceDisplayLabel(selected) }}
+          </option>
+        </select>
+      </div>
+      <div class="summary-item">
+        <span>Action Category</span>
+        <strong>
+          {{
+          formatLabel(
+          selected.action_category ||
+          selected.actionCategory
+          )
+          }}
+        </strong>
+      </div>
+      <div class="summary-item">
+        <span>Action</span>
+        <select disabled class="view-select">
+          <option selected>
+            {{ actionDisplayLabel(selected) }}
+          </option>
+        </select>
+      </div>
+      <div class="summary-item full-width">
+        <span>Description</span>
+        <strong>
+          {{ selected.description || "—" }}
+        </strong>
+      </div>
+      <div class="summary-item">
+        <span>
+          Status
+        </span>
+        <span class="badge" [class.good]="selected.status === 'ACTIVE'"
+          [class.warning]="selected.status === 'SUSPENDED'" [class.danger]="
               selected.status === 'INACTIVE' ||
               selected.status === 'DELETED'
-            "
-          >
-            {{ selected.status || "—" }}
-          </span>
-        </div>
-      </div>
-      <!-- Raw response -->
-      <details class="raw-details">
-        <summary>
-          View raw response
-        </summary>
-        <pre>{{ selected | json }}</pre>
-      </details>
-      <div class="modal-actions">
-        <button
-          type="button"
-          class="secondary"
-          (click)="closeDetails()"
-        >
-          Close
-        </button>
+            ">
+          {{ selected.status || "—" }}
+        </span>
       </div>
     </div>
+    <!-- Raw response -->
+    <details class="raw-details">
+      <summary>
+        View raw response
+      </summary>
+      <pre>{{ selected | json }}</pre>
+    </details>
+    <div class="modal-actions">
+      <button type="button" class="secondary" (click)="closeDetails()">
+        Close
+      </button>
+    </div>
   </div>
+</div>
 }
 
 <!-- =========================================================
      CONFIRM MODAL
 ========================================================= -->
-<app-confirm-modal
-  #confirmModal
-  (confirmed)="onDeletePermissionConfirmed()"
-  (cancelled)="onDeletePermissionCancelled()"
-></app-confirm-modal>
+<app-confirm-modal #confirmModal (confirmed)="onDeletePermissionConfirmed()"
+  (cancelled)="onDeletePermissionCancelled()"></app-confirm-modal>
+
+<!-- =========================================================
+     NOTIFICATION MODAL
+========================================================= -->
+<app-notification-modal #notificationModal>
+</app-notification-modal>
