@@ -308,11 +308,8 @@
 
 .notification-text {
   margin: 0;
-
   color: #374151;
-
   font-size: 15px;
-
   line-height: 1.6;
 
   /*
@@ -322,15 +319,20 @@
    * Multiple spaces
    */
   white-space: pre-wrap;
-
   overflow-wrap: anywhere;
-
   word-break: break-word;
-
   font-family: inherit;
 }
 
+:host ::ng-deep .notification-detail {
+  margin-left: 10px;
+}
 
+:host ::ng-deep .notification-errcode {
+  font-weight: bold;
+  font-size: 15px;
+  text-decoration: underline #4b5563 solid;
+}
 /* =========================================================
    JSON TABLE CONTAINER
 ========================================================= */
