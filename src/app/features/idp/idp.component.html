@@ -1,0 +1,425 @@
+<app-page
+  eyebrow="IDENTITY"
+  title="Identity Providers"
+  description="Manage Auth0, Okta, Cognito, SAML, and OIDC Identity Providers."
+>
+  <button
+    actions
+    type="button"
+    class="primary"
+    (click)="openCreate()"
+  >
+    + Create provider
+  </button>
+</app-page>
+
+<!-- =========================================================
+     SEARCH / FILTER TOOLBAR
+========================================================= -->
+
+<div class="toolbar">
+  <input
+    type="text"
+    [(ngModel)]="search"
+    (keyup.enter)="load()"
+    placeholder="Search provider name or type"
+  />
+  <select
+    [(ngModel)]="tenantUuid"
+    (change)="load()"
+  >
+    <option value="">All tenants</option>
+    @for (tenant of tenants; track tenant.tenantUuid) {
+      <option [value]="tenant.tenantUuid">{{ tenant.tenantName }}</option>
+    }
+  </select>
+  <select
+    [(ngModel)]="providerType"
+    (change)="load()"
+  >
+    <option value="">All types</option>
+    @for (type of providerTypes; track type) {
+      <option [value]="type">{{ type }}</option>
+    }
+  </select>
+  <select
+    [(ngModel)]="status"
+    (change)="load()"
+  >
+    <option value="">All statuses</option>
+    <option value="ACTIVE">ACTIVE</option>
+    <option value="INACTIVE">INACTIVE</option>
+    <option value="DELETED">DELETED</option>
+  </select>
+  <button
+    type="button"
+    class="secondary"
+    (click)="load()"
+    [disabled]="loading"
+  >
+    @if (loading) {
+      Loading...
+    } @else {
+      Refresh
+    }
+  </button>
+</div>
+
+<!-- =========================================================
+     AG GRID
+========================================================= -->
+<div class="panel grid-panel">
+  <ag-grid-angular
+    class="users-grid"
+    [rowData]="rows"
+    [columnDefs]="columnDefs"
+    [defaultColDef]="defaultColDef"
+    [gridOptions]="gridOptions"
+    (gridReady)="onGridReady($event)"
+  >
+  </ag-grid-angular>
+</div>
+
+<!-- =========================================================
+     CREATE / EDIT PROVIDER MODAL
+========================================================= -->
+
+@if (formOpen) {
+  <div
+    class="modal-backdrop"
+    (click)="closeCreate()"
+  >
+    <div
+      class="modal user-form-modal"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="modal-header">
+        <div>
+          <h3>
+            @if (editMode) {
+              Edit identity provider
+            } @else {
+              Create identity provider
+            }
+          </h3>
+          <p>
+            @if (editMode) {
+              Update configuration and authentication parameters.
+            } @else {
+              Register a new identity provider.
+            }
+          </p>
+        </div>
+        <button
+          type="button"
+          class="modal-close"
+          (click)="closeCreate()"
+          aria-label="Close"
+        >
+          ×
+        </button>
+      </div>
+
+      <!-- ===================================================
+           PROVIDER FORM
+      ==================================================== -->
+      <div class="form-grid">
+        <!-- Tenant -->
+        <label>
+          <span>
+            Tenant <b>*</b>
+          </span>
+          <select
+            [(ngModel)]="form.tenantUuid"
+            [disabled]="editMode"
+          >
+            <option value="" disabled>Select a tenant</option>
+            @for (tenant of tenants; track tenant.tenantUuid) {
+              <option [value]="tenant.tenantUuid">{{ tenant.tenantName }}</option>
+            }
+          </select>
+        </label>    
+        <!-- Provider Name -->
+        <label>
+          <span>
+            Provider name <b>*</b>
+          </span>
+          <input
+            type="text"
+            [(ngModel)]="form.providerName"
+            placeholder="e.g. Auth0 Main"
+            autocomplete="off"
+          />
+        </label>
+        <!-- Provider Type -->
+        <label>
+          <span>
+            Provider type <b>*</b>
+          </span>
+          <select [(ngModel)]="form.providerType">
+            @for (type of providerTypes; track type) {
+              <option [value]="type">{{ type }}</option>
+            }
+          </select>
+        </label>
+        <!-- Client ID -->
+        <label>
+          <span>
+            Client ID
+          </span>
+          <input
+            type="text"
+            [(ngModel)]="form.clientId"
+            placeholder="Enter client ID"
+          />
+        </label>
+        <!-- Client Secret -->
+        <label>
+          <span>
+            Client secret
+          </span>
+          <input
+            type="password"
+            [(ngModel)]="form.clientSecret"
+            [placeholder]="editMode ? 'Leave empty to keep current secret' : 'Enter client secret'"
+            autocomplete="new-password"
+          />
+        </label>
+        <!-- Scopes -->
+        <label>
+          <span>
+            Scopes (comma separated)
+          </span>
+          <input
+            type="text"
+            [(ngModel)]="scopesText"
+            placeholder="openid, profile, email"
+          />
+        </label>
+        <!-- Issuer URL -->
+        <label class="full-width">
+          <span>
+            Issuer URL
+          </span>
+          <input
+            type="url"
+            [(ngModel)]="form.issuerUrl"
+            placeholder="https://example.com/"
+          />
+        </label>
+        <!-- Authorization URL -->
+        <label class="full-width">
+          <span>
+            Authorization URL
+          </span>
+          <input
+            type="url"
+            [(ngModel)]="form.authorizationUrl"
+            placeholder="https://example.com/oauth/authorize"
+          />
+        </label>
+        <!-- Token URL -->
+        <label class="full-width">
+          <span>
+            Token URL
+          </span>
+          <input
+            type="url"
+            [(ngModel)]="form.tokenUrl"
+            placeholder="https://example.com/oauth/token"
+          />
+        </label>
+        <!-- JWKS URL -->
+        <label class="full-width">
+          <span>
+            JWKS URL
+          </span>
+          <input
+            type="url"
+            [(ngModel)]="form.jwksUrl"
+            placeholder="https://example.com/.well-known/jwks.json"
+          />
+        </label>
+      </div>
+      <!-- Actions -->
+      <div class="modal-actions">
+        <button
+          type="button"
+          class="secondary"
+          (click)="closeCreate()"
+          [disabled]="saving"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="primary"
+          (click)="save()"
+          [disabled]="saving"
+        >
+          @if (saving) {
+            @if (editMode) {
+              Updating...
+            } @else {
+              Creating...
+            }
+          } @else {
+            @if (editMode) {
+              Update
+            } @else {
+              Create
+            }
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- =========================================================
+     PROVIDER DETAILS MODAL
+========================================================= -->
+@if (selected) {
+  <div
+    class="modal-backdrop"
+    (click)="closeDetails()"
+  >
+    <div
+      class="modal details-modal"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="modal-header">
+        <div>
+          <h3>
+            Provider details
+          </h3>
+          <p>
+            Identity provider configuration metadata.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="modal-close"
+          (click)="closeDetails()"
+          aria-label="Close"
+        >
+          ×
+        </button>
+      </div>
+
+      <!-- Provider summary -->
+      <div class="user-summary">
+        <div class="summary-item">
+          <span>Tenant</span>
+          <strong>
+            {{ getTenantName(selected.tenantUuid) }}
+          </strong>
+        </div>
+        <div class="summary-item">
+          <span>Provider Name</span>
+          <strong>
+            {{ selected.providerName || "—" }}
+          </strong>
+        </div>
+        <div class="summary-item">
+          <span>Provider Code</span>
+          <strong>
+            {{ selected.providerCode || "—" }}
+          </strong>
+        </div>
+        <div class="summary-item">
+          <span>Provider Type</span>
+          <strong>
+            {{ selected.providerType || "—" }}
+          </strong>
+        </div>
+        <div class="summary-item">
+          <span>Client ID</span>
+          <strong>
+            {{ selected.clientId || "—" }}
+          </strong>
+        </div>
+        <div class="summary-item">
+          <span>Secret Status</span>
+          <strong>
+            {{ selected.hasSecret ? 'Configured' : 'Not set' }}
+            @if (selected.hasSecret && selected.secretKeyVersion) {
+              (v{{ selected.secretKeyVersion }})
+            }
+          </strong>
+        </div>
+        <div class="summary-item">
+          <span>Status</span>
+          <span
+            class="badge"
+            [class.good]="selected.status === 'ACTIVE'"
+            [class.danger]="selected.status === 'DELETED'"
+          >
+            {{ selected.status }}
+          </span>
+        </div>
+        <div class="summary-item full-width">
+          <span>Issuer URL</span>
+          <strong>
+            {{ selected.issuerUrl || "—" }}
+          </strong>
+        </div>
+      </div>
+
+      <!-- Test Connectivity Section -->
+      <div class="test-section">
+        <button
+          type="button"
+          class="primary"
+          (click)="testProvider(selected.identityProviderId)"
+          [disabled]="testing"
+        >
+          {{ testing ? 'Testing connectivity...' : 'Test connection' }}
+        </button>
+
+        @if (testResult) {
+          <div
+            class="test-result"
+            [class.success]="testResult.status === 'SUCCESS'"
+            [class.failed]="testResult.status !== 'SUCCESS'"
+          >
+            <pre>{{ testResult | json }}</pre>
+          </div>
+        }
+      </div>
+
+      <!-- Raw response -->
+      <details class="raw-details">
+        <summary>
+          View raw response
+        </summary>
+        <pre>{{ selected | json }}</pre>
+      </details>
+      <div class="modal-actions">
+        <button
+          type="button"
+          class="secondary"
+          (click)="closeDetails()"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- =========================================================
+     CONFIRM MODAL
+========================================================= -->
+<app-confirm-modal
+  #confirmModal
+  (confirmed)="onDeleteProviderConfirmed()"
+  (cancelled)="onDeleteProviderCancelled()"
+></app-confirm-modal>
+
+<!-- =========================================================
+     NOTIFICATION MODAL
+========================================================= -->
+<app-notification-modal
+  #notificationModal>
+</app-notification-modal>

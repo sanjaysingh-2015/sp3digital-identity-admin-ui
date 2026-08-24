@@ -63,7 +63,7 @@ export class AuthService {
    */
   searchTenants(search: string): Observable<TenantSearchResponse> {
     return this.http.get<TenantSearchResponse>(
-      `${this.apiBaseUrl}/tenants/search`,
+      `${this.apiBaseUrl}/public/tenants/search`,
       {
         params: {
           q: search,
