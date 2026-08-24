@@ -1,0 +1,86 @@
+@if (visible) {
+  <div
+    class="modal-backdrop"
+    (click)="close()"
+  >
+    <div
+      class="assign-modal"
+      role="dialog"
+      aria-modal="true"
+      (click)="$event.stopPropagation()"
+    >
+      <!-- Header -->
+      <div class="modal-header">
+        <div>
+          <h3>Assign roles</h3>
+          <p>{{ getUserLabel() }}</p>
+        </div>
+        <button
+          type="button"
+          class="close-button"
+          aria-label="Close"
+          (click)="close()"
+        >
+          ×
+        </button>
+      </div>
+
+      <!-- Search -->
+      <div class="modal-search">
+        <input
+          type="text"
+          [(ngModel)]="search"
+          placeholder="Search roles by name or type"
+        />
+      </div>
+
+      <!-- Body -->
+      <div class="modal-body">
+        @if (loading) {
+          <div class="empty-state">Loading roles...</div>
+        } @else if (!filteredRoles.length) {
+          <div class="empty-state">No roles found.</div>
+        } @else {
+          <ul class="assign-list">
+            @for (role of filteredRoles; track (role.role_id || role.roleId)) {
+              <li class="assign-row">
+                <div class="assign-row-info">
+                  <strong>{{ getRoleName(role) }}</strong>
+                  <span class="assign-row-type">
+                    {{ formatRoleType(role.role_type || role.roleType) }}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  class="toggle-btn"
+                  [class.assigned]="isAssigned(role)"
+                  [disabled]="isBusy(role)"
+                  (click)="toggle(role)"
+                >
+                  @if (isBusy(role)) {
+                    ...
+                  } @else if (isAssigned(role)) {
+                    Remove
+                  } @else {
+                    Assign
+                  }
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+
+      <!-- Footer -->
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="secondary"
+          (click)="close()"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+}

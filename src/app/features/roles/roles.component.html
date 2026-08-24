@@ -241,6 +241,13 @@
         >
           Close
         </button>
+        <button
+          type="button"
+          class="primary"
+          (click)="openAssignPermissions(selected)"
+        >
+          Add/Remove Permissions
+        </button>
       </div>
     </div>
   </div>
@@ -261,3 +268,10 @@
 <app-notification-modal
   #notificationModal>
 </app-notification-modal>
+
+<!-- =========================================================
+     ASSIGN PERMISSIONS MODAL
+========================================================= -->
+<app-assign-permissions-modal
+  #assignPermissionsModal>
+</app-assign-permissions-modal>

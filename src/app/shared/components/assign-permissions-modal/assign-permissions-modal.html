@@ -1,0 +1,86 @@
+@if (visible) {
+  <div
+    class="modal-backdrop"
+    (click)="close()"
+  >
+    <div
+      class="assign-modal"
+      role="dialog"
+      aria-modal="true"
+      (click)="$event.stopPropagation()"
+    >
+      <!-- Header -->
+      <div class="modal-header">
+        <div>
+          <h3>Assign permissions</h3>
+          <p>{{ getRoleLabel() }}</p>
+        </div>
+        <button
+          type="button"
+          class="close-button"
+          aria-label="Close"
+          (click)="close()"
+        >
+          ×
+        </button>
+      </div>
+
+      <!-- Search -->
+      <div class="modal-search">
+        <input
+          type="text"
+          [(ngModel)]="search"
+          placeholder="Search permissions by name, resource or action"
+        />
+      </div>
+
+      <!-- Body -->
+      <div class="modal-body">
+        @if (loading) {
+          <div class="empty-state">Loading permissions...</div>
+        } @else if (!filteredPermissions.length) {
+          <div class="empty-state">No permissions found.</div>
+        } @else {
+          <ul class="assign-list">
+            @for (permission of filteredPermissions; track (permission.permission_id || permission.permissionId)) {
+              <li class="assign-row">
+                <div class="assign-row-info">
+                  <strong>{{ getPermissionName(permission) }}</strong>
+                  <span class="assign-row-type">
+                    {{ getPermissionSubtitle(permission) }}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  class="toggle-btn"
+                  [class.assigned]="isAssigned(permission)"
+                  [disabled]="isBusy(permission)"
+                  (click)="toggle(permission)"
+                >
+                  @if (isBusy(permission)) {
+                    ...
+                  } @else if (isAssigned(permission)) {
+                    Remove
+                  } @else {
+                    Assign
+                  }
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+
+      <!-- Footer -->
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="secondary"
+          (click)="close()"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+}
