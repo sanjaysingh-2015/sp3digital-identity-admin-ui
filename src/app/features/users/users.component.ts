@@ -17,6 +17,7 @@ import { UiService } from "../../core/ui.service";
 import { PageComponent } from "../../shared/page.component";
 import { ConfirmModalComponent } from "../../shared/components/confirm-modal/confirm-modal";
 import { NotificationModalComponent } from "../../shared/components/notification-modal/notification-modal";
+import { AssignRolesModalComponent } from "../../shared/components/assign-roles-modal/assign-roles-modal";
 
 // Register AG Grid community modules
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -31,6 +32,7 @@ ModuleRegistry.registerModules([AllCommunityModule]);
     AgGridAngular,
     ConfirmModalComponent,
     NotificationModalComponent,
+    AssignRolesModalComponent,
   ],
   templateUrl: "./users.component.html",
   styleUrls: ["./users.component.scss"],
@@ -65,6 +67,13 @@ export class UsersComponent implements OnInit {
 
   @ViewChild("notificationModal")
   notificationModal!: NotificationModalComponent;
+
+  // =========================================================
+  // ASSIGN ROLES MODAL
+  // =========================================================
+
+  @ViewChild("assignRolesModal")
+  assignRolesModal!: AssignRolesModalComponent;
 
   // =========================================================
   // CREATE / EDIT
@@ -200,8 +209,8 @@ export class UsersComponent implements OnInit {
 
     {
       headerName: "Actions",
-      flex: 1.3,
-      minWidth: 190,
+      flex: 1.7,
+      minWidth: 250,
       sortable: false,
       filter: false,
 
@@ -251,6 +260,14 @@ export class UsersComponent implements OnInit {
 
             <button
               type="button"
+              class="ag-action-btn assign"
+              data-action="roles"
+            >
+              Roles
+            </button>
+
+            <button
+              type="button"
               class="ag-action-btn delete"
               data-action="delete"
             >
@@ -277,6 +294,10 @@ export class UsersComponent implements OnInit {
 
           case "edit":
             this.openEdit(params.data);
+            break;
+
+          case "roles":
+            this.openAssignRoles(params.data);
             break;
 
           case "delete":
@@ -420,6 +441,27 @@ export class UsersComponent implements OnInit {
     };
 
     this.formOpen = true;
+  }
+
+  // =========================================================
+  // ASSIGN ROLES
+  // =========================================================
+
+  openAssignRoles(user: any): void {
+    const userId = user?.user_id || user?.userId;
+
+    if (!userId) {
+      this.notificationModal.open({
+        type: "WARNING",
+        title: "Assign roles",
+        message: "Invalid user ID",
+        contentType: "TEXT",
+        autoCloseAfter: 3000,
+      });
+      return;
+    }
+
+    this.assignRolesModal.open(user);
   }
 
   // =========================================================

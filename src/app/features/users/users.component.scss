@@ -232,6 +232,10 @@ button:disabled {
   color: #2563eb;
 }
 
+:host ::ng-deep .ag-action-btn.assign {
+  color: #7c3aed;
+}
+
 :host ::ng-deep .ag-action-btn.delete {
   color: #dc2626;
 }

@@ -17,6 +17,7 @@ import { UiService } from "../../core/ui.service";
 import { PageComponent } from "../../shared/page.component";
 import { ConfirmModalComponent } from "../../shared/components/confirm-modal/confirm-modal";
 import { NotificationModalComponent } from "../../shared/components/notification-modal/notification-modal";
+import { AssignPermissionsModalComponent } from "../../shared/components/assign-permissions-modal/assign-permissions-modal";
 
 // Register AG Grid community modules
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -31,6 +32,7 @@ ModuleRegistry.registerModules([AllCommunityModule]);
     AgGridAngular,
     ConfirmModalComponent,
     NotificationModalComponent,
+    AssignPermissionsModalComponent,
   ],
   templateUrl: "./roles.component.html",
   styleUrls: ["./roles.component.scss"],
@@ -63,6 +65,13 @@ export class RolesComponent implements OnInit {
 
   @ViewChild("notificationModal")
   notificationModal!: NotificationModalComponent;
+
+  // =========================================================
+  // ASSIGN PERMISSIONS MODAL
+  // =========================================================
+
+  @ViewChild("assignPermissionsModal")
+  assignPermissionsModal!: AssignPermissionsModalComponent;
 
   // =========================================================
   // CREATE / EDIT
@@ -163,8 +172,8 @@ export class RolesComponent implements OnInit {
 
     {
       headerName: "Actions",
-      flex: 1.3,
-      minWidth: 190,
+      flex: 1.7,
+      minWidth: 250,
       sortable: false,
       filter: false,
 
@@ -214,6 +223,14 @@ export class RolesComponent implements OnInit {
 
             <button
               type="button"
+              class="ag-action-btn assign"
+              data-action="permissions"
+            >
+              Permissions
+            </button>
+
+            <button
+              type="button"
               class="ag-action-btn delete"
               data-action="delete"
             >
@@ -244,6 +261,10 @@ export class RolesComponent implements OnInit {
 
           case "edit":
             this.openEdit(params.data);
+            break;
+
+          case "permissions":
+            this.openAssignPermissions(params.data);
             break;
 
           case "delete":
@@ -386,6 +407,27 @@ export class RolesComponent implements OnInit {
     };
 
     this.formOpen = true;
+  }
+
+  // =========================================================
+  // ASSIGN PERMISSIONS
+  // =========================================================
+
+  openAssignPermissions(role: any): void {
+    const roleId = role?.role_id || role?.roleId;
+
+    if (!roleId) {
+      this.notificationModal.open({
+        type: "WARNING",
+        title: "Assign permissions",
+        message: "Invalid role ID",
+        contentType: "TEXT",
+        autoCloseAfter: 3000,
+      });
+      return;
+    }
+
+    this.assignPermissionsModal.open(role);
   }
 
   // =========================================================

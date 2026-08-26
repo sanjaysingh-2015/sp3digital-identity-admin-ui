@@ -86,12 +86,12 @@ export class AuthService {
   /**
    * Clear authentication
    */
-  clear() {
+  clear(queryParams?: Record<string, unknown>) {
     localStorage.removeItem(this.key);
 
     this.token.set(null);
 
-    this.router.navigate(["/login"]);
+    this.router.navigate(["/login"], queryParams ? { queryParams } : undefined);
   }
 
   /**

@@ -390,6 +390,13 @@
         >
           Close
         </button>
+        <button
+          type="button"
+          class="primary"
+          (click)="openAssignRoles(selected)"
+        >
+          Assigned roles to user
+        </button>
       </div>
     </div>
   </div>
@@ -411,3 +418,10 @@
 <app-notification-modal
   #notificationModal>
 </app-notification-modal>
+
+<!-- =========================================================
+     ASSIGN ROLES MODAL
+========================================================= -->
+<app-assign-roles-modal
+  #assignRolesModal>
+</app-assign-roles-modal>
