@@ -113,6 +113,11 @@
   color: #111827;
 }
 
+.close-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* =========================================================
    SEARCH
 ========================================================= */
@@ -168,7 +173,6 @@
 .assign-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
 
   padding: 10px 12px;
@@ -177,9 +181,34 @@
   border-radius: 8px;
 
   background: #fafcff;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.assign-row:hover {
+  background: #f4f8ff;
+}
+
+.assign-row-checkbox {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.assign-row-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #2563eb;
 }
 
 .assign-row-info {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -200,51 +229,38 @@
   font-size: 12px;
 }
 
-/* =========================================================
-   TOGGLE BUTTON
-========================================================= */
-
-.toggle-btn {
+.row-status {
   flex-shrink: 0;
-
-  min-width: 76px;
-  height: 32px;
-  padding: 0 12px;
-
-  border-radius: 6px;
-  border: 1px solid #2563eb;
-
-  background: #ffffff;
-  color: #2563eb;
-
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-
-  cursor: pointer;
-
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease,
-    border-color 0.15s ease;
+  color: #16a34a;
+  white-space: nowrap;
 }
 
-.toggle-btn:hover:not(:disabled) {
-  background: #eff6ff;
+/* Row highlight states -------------------------------------------------- */
+
+.assign-row.row-added {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
 }
 
-.toggle-btn.assigned {
-  border-color: #dc2626;
-  color: #dc2626;
-  background: #ffffff;
+.assign-row.row-added .row-status {
+  color: #16a34a;
 }
 
-.toggle-btn.assigned:hover:not(:disabled) {
+.assign-row.row-removed {
   background: #fef2f2;
+  border-color: #fecaca;
 }
 
-.toggle-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.assign-row.row-removed .row-status {
+  color: #dc2626;
+}
+
+.assign-row.row-removed .assign-row-info strong,
+.assign-row.row-removed .assign-row-type {
+  text-decoration: line-through;
+  text-decoration-color: #fca5a5;
 }
 
 /* =========================================================
@@ -254,7 +270,7 @@
 .modal-footer {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 10px;
 
   padding: 16px 20px;
@@ -263,6 +279,28 @@
   border-top: 1px solid #e5e7eb;
 
   box-sizing: border-box;
+}
+
+.changes-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.changes-summary .added {
+  color: #16a34a;
+}
+
+.changes-summary .removed {
+  color: #dc2626;
+}
+
+.footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .modal-footer button {
@@ -277,6 +315,7 @@
 
   cursor: pointer;
   box-sizing: border-box;
+  border: 1px solid transparent;
 }
 
 .modal-footer .secondary {
@@ -285,10 +324,26 @@
   border: 1px solid #d1d5db;
 }
 
-.modal-footer .secondary:hover {
+.modal-footer .secondary:hover:not(:disabled) {
   background: #f3f4f6;
   border-color: #9ca3af;
   color: #111827;
+}
+
+.modal-footer .primary {
+  background: #2563eb;
+  color: #ffffff;
+  border: 1px solid #2563eb;
+}
+
+.modal-footer .primary:hover:not(:disabled) {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.modal-footer button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* =========================================================
@@ -339,6 +394,7 @@
 
   .modal-footer {
     padding: 14px 16px;
+    flex-wrap: wrap;
   }
 }
 

@@ -19,6 +19,7 @@
           type="button"
           class="close-button"
           aria-label="Close"
+          [disabled]="saving"
           (click)="close()"
         >
           ×
@@ -43,28 +44,37 @@
         } @else {
           <ul class="assign-list">
             @for (permission of filteredPermissions; track (permission.permission_id || permission.permissionId)) {
-              <li class="assign-row">
+              <li
+                class="assign-row"
+                [class.row-added]="rowState(permission) === 'added'"
+                [class.row-removed]="rowState(permission) === 'removed'"
+                (click)="toggleSelection(permission)"
+              >
+                <label class="assign-row-checkbox" (click)="$event.stopPropagation()">
+                  <input
+                    type="checkbox"
+                    [checked]="isSelected(permission)"
+                    [disabled]="saving"
+                    (change)="toggleSelection(permission)"
+                  />
+                </label>
+
                 <div class="assign-row-info">
                   <strong>{{ getPermissionName(permission) }}</strong>
                   <span class="assign-row-type">
                     {{ getPermissionSubtitle(permission) }}
                   </span>
                 </div>
-                <button
-                  type="button"
-                  class="toggle-btn"
-                  [class.assigned]="isAssigned(permission)"
-                  [disabled]="isBusy(permission)"
-                  (click)="toggle(permission)"
-                >
-                  @if (isBusy(permission)) {
-                    ...
-                  } @else if (isAssigned(permission)) {
-                    Remove
-                  } @else {
-                    Assign
+
+                <span class="row-status">
+                  @if (rowState(permission) === 'added') {
+                    Will assign
+                  } @else if (rowState(permission) === 'removed') {
+                    Will remove
+                  } @else if (isSelected(permission)) {
+                    Assigned
                   }
-                </button>
+                </span>
               </li>
             }
           </ul>
@@ -73,13 +83,39 @@
 
       <!-- Footer -->
       <div class="modal-footer">
-        <button
-          type="button"
-          class="secondary"
-          (click)="close()"
-        >
-          Close
-        </button>
+        <span class="changes-summary">
+          @if (hasChanges) {
+            @if (pendingAddCount) {
+              <span class="added">+{{ pendingAddCount }}</span>
+            }
+            @if (pendingRemoveCount) {
+              <span class="removed">-{{ pendingRemoveCount }}</span>
+            }
+          }
+        </span>
+
+        <div class="footer-actions">
+          <button
+            type="button"
+            class="secondary"
+            [disabled]="saving"
+            (click)="close()"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="primary"
+            [disabled]="!hasChanges || saving"
+            (click)="save()"
+          >
+            @if (saving) {
+              Saving...
+            } @else {
+              Save changes
+            }
+          </button>
+        </div>
       </div>
     </div>
   </div>

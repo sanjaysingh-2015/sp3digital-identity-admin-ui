@@ -19,6 +19,7 @@
           type="button"
           class="close-button"
           aria-label="Close"
+          [disabled]="saving"
           (click)="close()"
         >
           ×
@@ -43,28 +44,37 @@
         } @else {
           <ul class="assign-list">
             @for (role of filteredRoles; track (role.role_id || role.roleId)) {
-              <li class="assign-row">
+              <li
+                class="assign-row"
+                [class.row-added]="rowState(role) === 'added'"
+                [class.row-removed]="rowState(role) === 'removed'"
+                (click)="toggleSelection(role)"
+              >
+                <label class="assign-row-checkbox" (click)="$event.stopPropagation()">
+                  <input
+                    type="checkbox"
+                    [checked]="isSelected(role)"
+                    [disabled]="saving"
+                    (change)="toggleSelection(role)"
+                  />
+                </label>
+
                 <div class="assign-row-info">
                   <strong>{{ getRoleName(role) }}</strong>
                   <span class="assign-row-type">
                     {{ formatRoleType(role.role_type || role.roleType) }}
                   </span>
                 </div>
-                <button
-                  type="button"
-                  class="toggle-btn"
-                  [class.assigned]="isAssigned(role)"
-                  [disabled]="isBusy(role)"
-                  (click)="toggle(role)"
-                >
-                  @if (isBusy(role)) {
-                    ...
-                  } @else if (isAssigned(role)) {
-                    Remove
-                  } @else {
-                    Assign
+
+                <span class="row-status">
+                  @if (rowState(role) === 'added') {
+                    Will assign
+                  } @else if (rowState(role) === 'removed') {
+                    Will remove
+                  } @else if (isSelected(role)) {
+                    Assigned
                   }
-                </button>
+                </span>
               </li>
             }
           </ul>
@@ -73,13 +83,39 @@
 
       <!-- Footer -->
       <div class="modal-footer">
-        <button
-          type="button"
-          class="secondary"
-          (click)="close()"
-        >
-          Close
-        </button>
+        <span class="changes-summary">
+          @if (hasChanges) {
+            @if (pendingAddCount) {
+              <span class="added">+{{ pendingAddCount }}</span>
+            }
+            @if (pendingRemoveCount) {
+              <span class="removed">-{{ pendingRemoveCount }}</span>
+            }
+          }
+        </span>
+
+        <div class="footer-actions">
+          <button
+            type="button"
+            class="secondary"
+            [disabled]="saving"
+            (click)="close()"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="primary"
+            [disabled]="!hasChanges || saving"
+            (click)="save()"
+          >
+            @if (saving) {
+              Saving...
+            } @else {
+              Save changes
+            }
+          </button>
+        </div>
       </div>
     </div>
   </div>

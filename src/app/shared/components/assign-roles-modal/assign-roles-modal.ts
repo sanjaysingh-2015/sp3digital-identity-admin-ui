@@ -1,6 +1,7 @@
 import { Component } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
+import { forkJoin, of, Observable } from "rxjs";
 
 import { ApiService } from "../../../core/api.service";
 import { UiService } from "../../../core/ui.service";
@@ -11,12 +12,19 @@ import { UiService } from "../../../core/ui.service";
  * Reusable "many-to-many" assignment dialog that lets an admin
  * assign / revoke roles for a single user.
  *
- * Wired against the EXISTING backend endpoints already present
- * in userService.js / userController.js:
+ * Rows are now multi-select checkboxes. Nothing hits the network
+ * until "Save changes" is pressed - at that point the diff between
+ * what was originally assigned and what's currently checked is
+ * sent as a single batched request per direction:
  *
- *   GET   /users/:userId/roles                (effective assignments)
- *   POST  /users/:userId/roles                { roleId }
- *   PATCH /users/:userId/roles/:userRoleId    { status: 'INACTIVE' }
+ *   POST  /users/:userId/roles                 { roleIds: [...] }      (assign, batched)
+ *   PATCH /users/:userId/roles/:userRoleId      { status: 'INACTIVE' } (revoke, one call per row, fired in parallel)
+ *
+ * NOTE: the assign endpoint's body changed from a single `roleId`
+ * to a `roleIds` array - the backend needs to accept that array
+ * (mirrors the pattern already used by the permissions endpoint).
+ * The revoke endpoint is unchanged; we just fire several of them
+ * at once via forkJoin so the whole save feels like one action.
  *
  * Usage (from a parent component):
  *
@@ -40,12 +48,18 @@ export class AssignRolesModalComponent {
   search = "";
 
   loading = false;
-  private busyRoleId: number | string | null = null;
+  saving = false;
 
   allRoles: any[] = [];
 
-  // roleId -> userRoleId, for roles currently (effectively) assigned to the user
+  // roleId -> userRoleId, for roles ORIGINALLY (effectively) assigned to the user.
+  // This is our source of truth for computing the save diff.
   private assignedMap: Record<string, number | string> = {};
+
+  // roleIds currently checked in the UI. Seeded from assignedMap on load,
+  // then mutated locally as the admin (un)checks rows. Nothing is sent to
+  // the server until save() is called.
+  private selectedIds = new Set<string>();
 
   constructor(
     private api: ApiService,
@@ -67,6 +81,7 @@ export class AssignRolesModalComponent {
     this.user = user;
     this.search = "";
     this.assignedMap = {};
+    this.selectedIds = new Set();
     this.visible = true;
 
     this.loadRoles();
@@ -74,6 +89,9 @@ export class AssignRolesModalComponent {
   }
 
   close(): void {
+    if (this.saving) {
+      return;
+    }
     this.visible = false;
     this.user = null;
   }
@@ -124,6 +142,8 @@ export class AssignRolesModalComponent {
           }
         });
         this.assignedMap = map;
+        // Seed the checkbox selection with whatever is currently assigned.
+        this.selectedIds = new Set(Object.keys(map));
       },
       error: (error) => {
         console.error("Failed to load assigned roles:", error);
@@ -133,69 +153,121 @@ export class AssignRolesModalComponent {
   }
 
   // =========================================================
-  // TOGGLE ASSIGN / REVOKE
+  // SELECTION (local only, no network calls)
   // =========================================================
 
-  isAssigned(role: any): boolean {
+  isSelected(role: any): boolean {
+    const roleId = role?.role_id ?? role?.roleId;
+    return roleId !== undefined && this.selectedIds.has(String(roleId));
+  }
+
+  private isOriginallyAssigned(role: any): boolean {
     const roleId = role?.role_id ?? role?.roleId;
     return roleId !== undefined && this.assignedMap[String(roleId)] !== undefined;
   }
 
-  isBusy(role: any): boolean {
-    const roleId = role?.role_id ?? role?.roleId;
-    return this.busyRoleId !== null && String(this.busyRoleId) === String(roleId);
+  /** Visual state of a row relative to the original assignment, for highlighting. */
+  rowState(role: any): "added" | "removed" | "unchanged" {
+    const selected = this.isSelected(role);
+    const wasAssigned = this.isOriginallyAssigned(role);
+    if (selected && !wasAssigned) {
+      return "added";
+    }
+    if (!selected && wasAssigned) {
+      return "removed";
+    }
+    return "unchanged";
   }
 
-  toggle(role: any): void {
-    const userId = this.getUserId();
+  toggleSelection(role: any): void {
+    if (this.saving) {
+      return;
+    }
     const roleId = role?.role_id ?? role?.roleId;
-
-    if (!userId || roleId === undefined || roleId === null) {
-      this.ui.show("Invalid role selection");
+    if (roleId === undefined || roleId === null) {
       return;
     }
-
-    if (this.busyRoleId !== null) {
-      return;
-    }
-
-    this.busyRoleId = roleId;
-
-    const userRoleId = this.assignedMap[String(roleId)];
-
-    if (userRoleId !== undefined) {
-      // ===================== REVOKE =====================
-      this.api
-        .patch<any>(`/users/${userId}/roles/${userRoleId}`, { status: "INACTIVE" })
-        .subscribe({
-          next: () => {
-            delete this.assignedMap[String(roleId)];
-            this.busyRoleId = null;
-            this.ui.show(`Removed "${this.getRoleName(role)}" from ${this.getUserLabel()}`);
-          },
-          error: (error) => {
-            this.busyRoleId = null;
-            console.error("Failed to revoke role:", error);
-            this.ui.show("Failed to remove role");
-          },
-        });
+    const key = String(roleId);
+    if (this.selectedIds.has(key)) {
+      this.selectedIds.delete(key);
     } else {
-      // ===================== ASSIGN =====================
-      this.api.post<any>(`/users/${userId}/roles`, { roleId }).subscribe({
-        next: (response) => {
-          const newUserRoleId =
-            response?.userRoleId ?? response?.data?.userRoleId ?? response?.user_role_id;
-          this.assignedMap[String(roleId)] = newUserRoleId ?? true;
-          this.busyRoleId = null;
-          this.ui.show(`Assigned "${this.getRoleName(role)}" to ${this.getUserLabel()}`);
-        },
-        error: (error) => {
-          this.busyRoleId = null;
-          console.error("Failed to assign role:", error);
-          this.ui.show("Failed to assign role");
-        },
-      });
+      this.selectedIds.add(key);
     }
+  }
+
+  get hasChanges(): boolean {
+    const originalKeys = Object.keys(this.assignedMap);
+    if (originalKeys.length !== this.selectedIds.size) {
+      return true;
+    }
+    return originalKeys.some((key) => !this.selectedIds.has(key));
+  }
+
+  get pendingAddCount(): number {
+    let count = 0;
+    this.selectedIds.forEach((id) => {
+      if (this.assignedMap[id] === undefined) {
+        count++;
+      }
+    });
+    return count;
+  }
+
+  get pendingRemoveCount(): number {
+    return Object.keys(this.assignedMap).filter((id) => !this.selectedIds.has(id)).length;
+  }
+
+  // =========================================================
+  // SAVE (batched)
+  // =========================================================
+
+  save(): void {
+    const userId = this.getUserId();
+    if (!userId || this.saving || !this.hasChanges) {
+      return;
+    }
+
+    const toAssign: (number | string)[] = [];
+    this.selectedIds.forEach((id) => {
+      if (this.assignedMap[id] === undefined) {
+        toAssign.push(id);
+      }
+    });
+
+    const toRevokeUserRoleIds: (number | string)[] = Object.keys(this.assignedMap)
+      .filter((id) => !this.selectedIds.has(id))
+      .map((id) => this.assignedMap[id]);
+
+    this.saving = true;
+
+    const requests: Observable<any>[] = [];
+
+    if (toAssign.length) {
+      // Single batched call - all newly-checked roles assigned at once.
+      requests.push(this.api.post<any>(`/users/${userId}/roles`, { roleIds: toAssign }));
+    }
+
+    toRevokeUserRoleIds.forEach((userRoleId) => {
+      requests.push(
+        this.api.patch<any>(`/users/${userId}/roles/${userRoleId}`, { status: "INACTIVE" }),
+      );
+    });
+
+    forkJoin(requests.length ? requests : [of(null)]).subscribe({
+      next: () => {
+        this.saving = false;
+        this.ui.show(`Roles updated for ${this.getUserLabel()}`);
+        this.close();
+      },
+      error: (error) => {
+        this.saving = false;
+        console.error("Failed to save role assignments:", error);
+        this.ui.show("Failed to save role assignments");
+        // Re-sync with the server so the checkboxes reflect what actually
+        // stuck, in case only some of the batched requests failed.
+        this.loadAssignments();
+      },
+    });
   }
 
   // =========================================================
