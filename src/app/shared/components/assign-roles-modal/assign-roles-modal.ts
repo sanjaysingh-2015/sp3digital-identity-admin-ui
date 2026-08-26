@@ -1,11 +1,11 @@
-import { Component } from "@angular/core";
+import { Component, ViewChild } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { forkJoin, of, Observable } from "rxjs";
 
 import { ApiService } from "../../../core/api.service";
 import { UiService } from "../../../core/ui.service";
-
+import { NotificationModalComponent } from "../../../shared/components/notification-modal/notification-modal";
 /**
  * AssignRolesModalComponent
  * ---------------------------------------------------------
@@ -36,7 +36,7 @@ import { UiService } from "../../../core/ui.service";
 @Component({
   selector: "app-assign-roles-modal",
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, NotificationModalComponent],
   templateUrl: "./assign-roles-modal.html",
   styleUrls: ["./assign-roles-modal.css"],
 })
@@ -61,6 +61,13 @@ export class AssignRolesModalComponent {
   // the server until save() is called.
   private selectedIds = new Set<string>();
 
+  // =========================================================
+  // NOTIFICATION MODAL
+  // =========================================================
+
+  @ViewChild("notificationModal")
+  notificationModal!: NotificationModalComponent;
+
   constructor(
     private api: ApiService,
     private ui: UiService,
@@ -74,7 +81,13 @@ export class AssignRolesModalComponent {
     const userId = user?.user_id || user?.userId;
 
     if (!userId) {
-      this.ui.show("Invalid user ID");
+      this.notificationModal.open({
+        type: "ERROR",
+        title: "Failed to load roles",
+        message: "Invalid user ID",
+        contentType: "TEXT",
+        autoCloseAfter: 3000,
+      });
       return;
     }
 
@@ -103,24 +116,34 @@ export class AssignRolesModalComponent {
   private loadRoles(): void {
     this.loading = true;
 
-    this.api.get<any>("/authorization/roles", { page: 1, limit: 200 }).subscribe({
-      next: (response) => {
-        const rows =
-          response?.data?.items ||
-          response?.items ||
-          response?.data ||
-          response?.rows ||
-          [];
+    this.api
+      .get<any>("/authorization/roles", { page: 1, limit: 200 })
+      .subscribe({
+        next: (response) => {
+          const rows =
+            response?.data?.items ||
+            response?.items ||
+            response?.data ||
+            response?.rows ||
+            [];
 
-        this.allRoles = rows.filter((role: any) => (role?.status || "ACTIVE") === "ACTIVE");
-        this.loading = false;
-      },
-      error: (error) => {
-        this.loading = false;
-        console.error("Failed to load roles:", error);
-        this.ui.show("Failed to load roles");
-      },
-    });
+          this.allRoles = rows.filter(
+            (role: any) => (role?.status || "ACTIVE") === "ACTIVE",
+          );
+          this.loading = false;
+        },
+        error: (error) => {
+          this.loading = false;
+          console.error("Failed to load roles:", error);
+          this.notificationModal.open({
+            type: "ERROR",
+            title: "Failed to load roles",
+            message: "Failed to load roles",
+            contentType: "TEXT",
+            autoCloseAfter: 3000,
+          });
+        },
+      });
   }
 
   private loadAssignments(): void {
@@ -131,13 +154,18 @@ export class AssignRolesModalComponent {
 
     this.api.get<any>(`/users/${userId}/roles`).subscribe({
       next: (response) => {
-        const items = response?.items || response?.data?.items || response?.data || [];
+        const items =
+          response?.items || response?.data?.items || response?.data || [];
 
         const map: Record<string, number | string> = {};
         items.forEach((assignment: any) => {
           const roleId = assignment?.roleId ?? assignment?.role_id;
           const userRoleId = assignment?.userRoleId ?? assignment?.user_role_id;
-          if (roleId !== undefined && roleId !== null && userRoleId !== undefined) {
+          if (
+            roleId !== undefined &&
+            roleId !== null &&
+            userRoleId !== undefined
+          ) {
             map[String(roleId)] = userRoleId;
           }
         });
@@ -147,7 +175,13 @@ export class AssignRolesModalComponent {
       },
       error: (error) => {
         console.error("Failed to load assigned roles:", error);
-        this.ui.show("Failed to load assigned roles");
+        this.notificationModal.open({
+          type: "ERROR",
+          title: "Failed to load roles",
+          message: "Failed to load assigned roles",
+          contentType: "TEXT",
+          autoCloseAfter: 3000,
+        });
       },
     });
   }
@@ -163,7 +197,9 @@ export class AssignRolesModalComponent {
 
   private isOriginallyAssigned(role: any): boolean {
     const roleId = role?.role_id ?? role?.roleId;
-    return roleId !== undefined && this.assignedMap[String(roleId)] !== undefined;
+    return (
+      roleId !== undefined && this.assignedMap[String(roleId)] !== undefined
+    );
   }
 
   /** Visual state of a row relative to the original assignment, for highlighting. */
@@ -214,7 +250,9 @@ export class AssignRolesModalComponent {
   }
 
   get pendingRemoveCount(): number {
-    return Object.keys(this.assignedMap).filter((id) => !this.selectedIds.has(id)).length;
+    return Object.keys(this.assignedMap).filter(
+      (id) => !this.selectedIds.has(id),
+    ).length;
   }
 
   // =========================================================
@@ -234,7 +272,9 @@ export class AssignRolesModalComponent {
       }
     });
 
-    const toRevokeUserRoleIds: (number | string)[] = Object.keys(this.assignedMap)
+    const toRevokeUserRoleIds: (number | string)[] = Object.keys(
+      this.assignedMap,
+    )
       .filter((id) => !this.selectedIds.has(id))
       .map((id) => this.assignedMap[id]);
 
@@ -244,25 +284,42 @@ export class AssignRolesModalComponent {
 
     if (toAssign.length) {
       // Single batched call - all newly-checked roles assigned at once.
-      requests.push(this.api.post<any>(`/users/${userId}/roles`, { roleIds: toAssign }));
+      requests.push(
+        this.api.post<any>(`/users/${userId}/roles`, { roleIds: toAssign }),
+      );
     }
 
     toRevokeUserRoleIds.forEach((userRoleId) => {
       requests.push(
-        this.api.patch<any>(`/users/${userId}/roles/${userRoleId}`, { status: "INACTIVE" }),
+        this.api.patch<any>(`/users/${userId}/roles/${userRoleId}`, {
+          status: "INACTIVE",
+        }),
       );
     });
 
     forkJoin(requests.length ? requests : [of(null)]).subscribe({
       next: () => {
         this.saving = false;
-        this.ui.show(`Roles updated for ${this.getUserLabel()}`);
+        const message = `Roles updated for ${this.getUserLabel()}`;
+        this.notificationModal.open({
+          type: "SUCCESS",
+          title: "Role Assignment",
+          message: message,
+          contentType: "TEXT",
+          autoCloseAfter: 3000,
+        });
         this.close();
       },
       error: (error) => {
         this.saving = false;
         console.error("Failed to save role assignments:", error);
-        this.ui.show("Failed to save role assignments");
+        this.notificationModal.open({
+          type: "ERROR",
+          title: "Failed to save roles",
+          message: "Failed to save role assignments",
+          contentType: "TEXT",
+          autoCloseAfter: 3000,
+        });
         // Re-sync with the server so the checkboxes reflect what actually
         // stuck, in case only some of the batched requests failed.
         this.loadAssignments();

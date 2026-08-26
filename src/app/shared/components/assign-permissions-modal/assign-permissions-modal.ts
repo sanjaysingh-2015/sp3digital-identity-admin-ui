@@ -1,11 +1,11 @@
-import { Component } from "@angular/core";
+import { Component, ViewChild } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { forkJoin, of, Observable } from "rxjs";
 
 import { ApiService } from "../../../core/api.service";
 import { UiService } from "../../../core/ui.service";
-
+import { NotificationModalComponent } from "../../../shared/components/notification-modal/notification-modal";
 /**
  * AssignPermissionsModalComponent
  * ---------------------------------------------------------
@@ -37,7 +37,7 @@ import { UiService } from "../../../core/ui.service";
 @Component({
   selector: "app-assign-permissions-modal",
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, NotificationModalComponent],
   templateUrl: "./assign-permissions-modal.html",
   styleUrls: ["./assign-permissions-modal.css"],
 })
@@ -62,6 +62,13 @@ export class AssignPermissionsModalComponent {
   // the server until save() is called.
   private selectedIds = new Set<string>();
 
+  // =========================================================
+  // NOTIFICATION MODAL
+  // =========================================================
+
+  @ViewChild("notificationModal")
+  notificationModal!: NotificationModalComponent;
+
   constructor(
     private api: ApiService,
     private ui: UiService,
@@ -73,9 +80,14 @@ export class AssignPermissionsModalComponent {
 
   open(role: any): void {
     const roleId = role?.role_id || role?.roleId;
-
     if (!roleId) {
-      this.ui.show("Invalid role ID");
+      this.notificationModal.open({
+        type: "ERROR",
+        title: "Failed to load permissions",
+        message: "Invalid role ID",
+        contentType: "TEXT",
+        autoCloseAfter: 3000,
+      });
       return;
     }
 
@@ -123,7 +135,14 @@ export class AssignPermissionsModalComponent {
         error: (error) => {
           this.loading = false;
           console.error("Failed to load permissions:", error);
-          this.ui.show("Failed to load permissions");
+
+          this.notificationModal.open({
+            type: "ERROR",
+            title: "Failed to load permissions",
+            message: "Failed to load permissions",
+            contentType: "TEXT",
+            autoCloseAfter: 3000,
+          });
         },
       });
   }
@@ -145,7 +164,7 @@ export class AssignPermissionsModalComponent {
             assignment?.permissionId ?? assignment?.permission_id;
           const rolePermissionId =
             assignment?.rolePermissionId ?? assignment?.role_permission_id;
-            const status = assignment?.status
+          const status = assignment?.status;
           if (
             permissionId !== undefined &&
             permissionId !== null &&
@@ -161,7 +180,13 @@ export class AssignPermissionsModalComponent {
       },
       error: (error) => {
         console.error("Failed to load assigned permissions:", error);
-        this.ui.show("Failed to load assigned permissions");
+        this.notificationModal.open({
+          type: "ERROR",
+          title: "Failed to load permissions",
+          message: "Failed to load assigned permissions",
+          contentType: "TEXT",
+          autoCloseAfter: 3000,
+        });
       },
     });
   }
@@ -172,7 +197,9 @@ export class AssignPermissionsModalComponent {
 
   isSelected(permission: any): boolean {
     const permissionId = permission?.permission_id ?? permission?.permissionId;
-    return permissionId !== undefined && this.selectedIds.has(String(permissionId));
+    return (
+      permissionId !== undefined && this.selectedIds.has(String(permissionId))
+    );
   }
 
   private isOriginallyAssigned(permission: any): boolean {
@@ -231,7 +258,9 @@ export class AssignPermissionsModalComponent {
   }
 
   get pendingRemoveCount(): number {
-    return Object.keys(this.assignedMap).filter((id) => !this.selectedIds.has(id)).length;
+    return Object.keys(this.assignedMap).filter(
+      (id) => !this.selectedIds.has(id),
+    ).length;
   }
 
   // =========================================================
@@ -251,7 +280,9 @@ export class AssignPermissionsModalComponent {
       }
     });
 
-    const toRevokeRolePermissionIds: (number | string)[] = Object.keys(this.assignedMap)
+    const toRevokeRolePermissionIds: (number | string)[] = Object.keys(
+      this.assignedMap,
+    )
       .filter((id) => !this.selectedIds.has(id))
       .map((id) => this.assignedMap[id]);
 
@@ -267,7 +298,7 @@ export class AssignPermissionsModalComponent {
             permissionIds: toAssign,
           }),
         );
-      } catch(error) {
+      } catch (error) {
         console.log("Error: ", error);
       }
     }
@@ -280,21 +311,34 @@ export class AssignPermissionsModalComponent {
             permissionIds: toRevokeRolePermissionIds,
           }),
         );
-      } catch(error) {
+      } catch (error) {
         console.log("Error: ", error);
       }
     }
 
     forkJoin(requests.length ? requests : [of(null)]).subscribe({
       next: () => {
+        const message = `Permissions updated for ${this.getRoleLabel()}`;
         this.saving = false;
-        this.ui.show(`Permissions updated for ${this.getRoleLabel()}`);
+        this.notificationModal.open({
+          type: "SUCCESS",
+          title: "Permission Updation",
+          message: message,
+          contentType: "TEXT",
+          autoCloseAfter: 3000,
+        });
         this.close();
       },
       error: (error) => {
         this.saving = false;
         console.error("Failed to save permission assignments:", error);
-        this.ui.show("Failed to save permission assignments");
+        this.notificationModal.open({
+          type: "ERROR",
+          title: "Failed to load permission",
+          message: "Failed to save permission assignments",
+          contentType: "TEXT",
+          autoCloseAfter: 3000,
+        });
         // Re-sync with the server so the checkboxes reflect what actually
         // stuck, in case only some of the batched requests failed.
         this.loadAssignments();
