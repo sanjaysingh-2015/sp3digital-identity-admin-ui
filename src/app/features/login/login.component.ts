@@ -113,11 +113,6 @@ export class LoginComponent implements OnInit {
       tenantUuid: tenantUuid!,
     };
 
-    console.log("Login Request:", {
-      usernameOrEmail,
-      tenantUuid,
-    });
-
     this.loading = true;
     this.authService
       .login(request)
@@ -129,7 +124,7 @@ export class LoginComponent implements OnInit {
       .subscribe({
         next: (response) => {
           console.log("Login successful");
-
+          localStorage.setItem("tenantUuid", tenantUuid!)
           this.authService.setToken(response.accessToken);
 
           // Add dashboard navigation here
