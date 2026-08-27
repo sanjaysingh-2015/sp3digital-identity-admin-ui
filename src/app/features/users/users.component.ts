@@ -22,6 +22,15 @@ import { AssignRolesModalComponent } from "../../shared/components/assign-roles-
 // Register AG Grid community modules
 ModuleRegistry.registerModules([AllCommunityModule]);
 
+export interface Tenant {
+  tenantUuid: string;
+  tenantCode: string;
+  tenantName: string;
+  status?: string;
+  createdOn?: string;
+  modifiedOn?: string;
+}
+
 @Component({
   selector: "app-users",
   standalone: true,
@@ -38,6 +47,22 @@ ModuleRegistry.registerModules([AllCommunityModule]);
   styleUrls: ["./users.component.scss"],
 })
 export class UsersComponent implements OnInit {
+  // Server-side pagination state — the API paginates (page/limit/totalItems/
+  // totalPages), so AG Grid's built-in pager can't be used as-is: it only
+  // paginates whatever rows are already loaded, but a given response only
+  // ever holds one page's worth (<= limit) out of totalItems.
+  page = 1;
+  limit = 20;
+  totalItems = 0;
+  totalPages = 1;
+
+  // =========================================================
+  // TENANTS
+  // =========================================================
+
+  tenants: Tenant[] = [];
+  loadingTenants = false;
+
   // =========================================================
   // DATA
   // =========================================================
@@ -50,6 +75,7 @@ export class UsersComponent implements OnInit {
   loading = false;
   saving = false;
   deleting = false;
+  tenantUuid = "";
 
   selected: any = null;
 
@@ -84,18 +110,15 @@ export class UsersComponent implements OnInit {
 
   form = {
     userId: null as number | string | null,
-
+    tenantUuid: "",
     username: "",
     email: "",
-
     firstName: "",
     middleName: "",
     lastName: "",
     displayName: "",
-
     phoneCountryCode: "",
     phoneNumber: "",
-
     userType: "USER",
   };
 
@@ -335,6 +358,7 @@ export class UsersComponent implements OnInit {
   // =========================================================
 
   ngOnInit(): void {
+    this.loadTenants();
     this.load();
   }
 
@@ -352,13 +376,14 @@ export class UsersComponent implements OnInit {
   // LOAD USERS
   // =========================================================
 
-  load(): void {
+  load(page: number = this.page): void {
     this.loading = true;
+    this.page = page;
 
     this.api
       .get<any>("/users", {
         page: 1,
-        limit: 50,
+        limit: this.limit,
         search: this.search,
         status: this.status,
       })
@@ -370,6 +395,12 @@ export class UsersComponent implements OnInit {
             response?.data ||
             response?.rows ||
             [];
+
+          const pagination = response?.pagination;
+          this.page = pagination?.page ?? this.page;
+          this.limit = pagination?.limit ?? this.limit;
+          this.totalItems = pagination?.totalItems ?? this.rows.length;
+          this.totalPages = pagination?.totalPages ?? 1;
 
           this.loading = false;
 
@@ -397,6 +428,31 @@ export class UsersComponent implements OnInit {
       });
   }
 
+  // =========================================================
+  // LOAD TENANTS
+  // =========================================================
+
+  loadTenants(): void {
+    this.loadingTenants = true;
+
+    this.api.get<any>("/tenants").subscribe({
+      next: (response) => {
+        this.tenants = response?.data || response?.items || [];
+        this.loadingTenants = false;
+      },
+      error: (error) => {
+        this.loadingTenants = false;
+        console.error("Failed to load tenants:", error);
+        this.notificationModal.open({
+          type: "ERROR",
+          title: "Failed to load tenants",
+          message: error,
+          contentType: "TEXT",
+          autoCloseAfter: 3000,
+        });
+      },
+    });
+  }
   // =========================================================
   // CREATE
   // =========================================================
@@ -428,6 +484,7 @@ export class UsersComponent implements OnInit {
     this.editMode = true;
     this.form = {
       userId,
+      tenantUuid: user?.tenant_uuid || user?.tenantUuid || "", 
       username: user?.username || "",
       email: user?.email || "",
       firstName: user?.first_name || user?.firstName || "",
@@ -489,6 +546,7 @@ export class UsersComponent implements OnInit {
 
     this.saving = true;
     const request = {
+      tenantUuid: this.form.tenantUuid,
       username: this.form.username.trim(),
       email: this.form.email.trim(),
       firstName: this.form.firstName.trim(),
@@ -663,6 +721,38 @@ export class UsersComponent implements OnInit {
   }
 
   // =========================================================
+  // PAGINATION CONTROLS
+  // =========================================================
+
+  goToPage(page: number): void {
+    if (
+      page < 1 ||
+      page > this.totalPages ||
+      page === this.page ||
+      this.loading
+    ) {
+      return;
+    }
+    this.load(page);
+  }
+
+  get hasPreviousPage(): boolean {
+    return this.page > 1;
+  }
+
+  get hasNextPage(): boolean {
+    return this.page < this.totalPages;
+  }
+
+  get rangeStart(): number {
+    return this.totalItems === 0 ? 0 : (this.page - 1) * this.limit + 1;
+  }
+
+  get rangeEnd(): number {
+    return Math.min(this.page * this.limit, this.totalItems);
+  }
+
+  // =========================================================
   // VIEW
   // =========================================================
 
@@ -782,6 +872,7 @@ export class UsersComponent implements OnInit {
   resetForm(): void {
     this.form = {
       userId: null,
+      tenantUuid: "",
       username: "",
       email: "",
       firstName: "",

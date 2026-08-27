@@ -105,9 +105,7 @@ button:disabled {
 
 .panel {
   background: #ffffff;
-
   border: 1px solid var(--border-color, #e5e7eb);
-
   border-radius: 10px;
 }
 
@@ -120,7 +118,6 @@ button:disabled {
   width: 100%;
   height: 620px;
 }
-
 
 /* =========================================================
    PAGER
@@ -176,33 +173,23 @@ button:disabled {
 
 :host ::ng-deep .ag-user-cell {
   display: flex;
-
   flex-direction: column;
-
   justify-content: center;
-
   height: 100%;
-
   line-height: 1.25;
 }
 
 :host ::ng-deep .ag-user-cell strong {
   display: block;
-
   color: #111827;
-
-  font-size: 14px;
-
+  font-size: 12px;
   font-weight: 600;
 }
 
 :host ::ng-deep .ag-user-cell small {
   display: block;
-
   margin-top: 4px;
-
   color: #64748b;
-
   font-size: 12px;
 }
 
@@ -212,21 +199,13 @@ button:disabled {
 
 :host ::ng-deep .ag-status-badge {
   display: inline-flex;
-
   align-items: center;
-
   padding: 4px 9px;
-
   border-radius: 999px;
-
   background: #f1f5f9;
-
   color: #475569;
-
   font-size: 11px;
-
   font-weight: 700;
-
   letter-spacing: 0.03em;
 }
 
@@ -251,25 +230,17 @@ button:disabled {
 
 :host ::ng-deep .ag-table-actions {
   display: flex;
-
   align-items: center;
-
   gap: 12px;
-
   height: 100%;
 }
 
 :host ::ng-deep .ag-action-btn {
   border: 0;
-
   background: transparent;
-
   padding: 4px 0;
-
   font-size: 13px;
-
   font-weight: 600;
-
   cursor: pointer;
 }
 
@@ -303,7 +274,6 @@ button:disabled {
 
 :host ::ng-deep .ag-root-wrapper {
   border: 0 !important;
-
   border-radius: 10px;
 }
 
@@ -313,13 +283,9 @@ button:disabled {
 
 :host ::ng-deep .ag-header-cell {
   font-size: 12px;
-
   font-weight: 700;
-
   color: #64748b;
-
   text-transform: uppercase;
-
   letter-spacing: 0.04em;
 }
 
@@ -333,12 +299,9 @@ button:disabled {
 
 :host ::ng-deep .ag-cell {
   display: flex;
-
   align-items: center;
-
   color: #334155;
-
-  font-size: 14px;
+  font-size: 12px;
 }
 
 :host ::ng-deep .ag-paging-panel {
@@ -382,6 +345,26 @@ button:disabled {
 .badge.danger {
   background: #fee2e2;
   color: #991b1b;
+}
+
+/* =========================================================
+   AG GRID - CHANGES COLUMN
+========================================================= */
+
+:host ::ng-deep .changes-link {
+  color: #2563eb;
+
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+:host ::ng-deep .changes-link:hover {
+  text-decoration: underline;
+}
+
+:host ::ng-deep .changes-empty {
+  color: #94a3b8;
 }
 
 /* =========================================================
@@ -534,6 +517,38 @@ button:disabled {
   width: min(760px, 100%);
 }
 
+/* =========================================================
+   CHANGES MODAL
+========================================================= */
+
+.changes-modal {
+  width: min(700px, 100%);
+}
+
+.changes-json {
+  margin: 0;
+
+  padding: 16px;
+
+  max-height: 60vh;
+
+  overflow: auto;
+
+  border-radius: 8px;
+
+  background: #0f172a;
+
+  color: #e2e8f0;
+
+  font-size: 12px;
+
+  line-height: 1.5;
+
+  white-space: pre-wrap;
+
+  word-break: break-word;
+}
+
 .user-summary {
   display: grid;
 
@@ -658,5 +673,17 @@ button:disabled {
 
   .users-grid {
     height: 550px;
+  }
+
+  .pager {
+    flex-direction: column;
+
+    align-items: stretch;
+
+    gap: 10px;
+  }
+
+  .pager-controls {
+    justify-content: space-between;
   }
 }
