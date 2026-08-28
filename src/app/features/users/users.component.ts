@@ -382,7 +382,7 @@ export class UsersComponent implements OnInit {
 
     this.api
       .get<any>("/users", {
-        page: 1,
+        page: this.page,
         limit: this.limit,
         search: this.search,
         status: this.status,
@@ -426,6 +426,15 @@ export class UsersComponent implements OnInit {
           });
         },
       });
+  }
+
+  // =========================================================
+  // FILTER CHANGES (reset to page 1 — a stale page number could
+  // otherwise land past the end of a newly-filtered result set)
+  // =========================================================
+
+  onFilterChange(): void {
+    this.load(1);
   }
 
   // =========================================================
