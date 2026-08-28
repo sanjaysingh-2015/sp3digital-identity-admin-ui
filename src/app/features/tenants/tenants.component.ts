@@ -17,44 +17,13 @@ import { UiService } from "../../core/ui.service";
 import { PageComponent } from "../../shared/page.component";
 import { ConfirmModalComponent } from "../../shared/components/confirm-modal/confirm-modal";
 import { NotificationModalComponent } from "../../shared/components/notification-modal/notification-modal";
+import { AssignPermissionsModalComponent } from "../../shared/components/assign-permissions-modal/assign-permissions-modal";
 
 // Register AG Grid community modules
 ModuleRegistry.registerModules([AllCommunityModule]);
 
-export interface Tenant {
-  tenantUuid: string;
-  tenantCode: string;
-  tenantName: string;
-  status?: string;
-  createdOn?: string;
-  modifiedOn?: string;
-}
-
-export interface IdentityProvider {
-  identityProviderId?: number;
-  tenantUuid?: string;
-  providerUuid?: string;
-  providerCode: string;
-  providerName: string;
-  providerType: string;
-  issuerUrl?: string;
-  authorizationUrl?: string;
-  tokenUrl?: string;
-  jwksUrl?: string;
-  clientId?: string;
-  clientSecret?: string;
-  hasSecret?: boolean;
-  secretKeyVersion?: string;
-  secretRotatedOn?: string;
-  scopes?: string[];
-  configuration?: Record<string, any>;
-  status?: string;
-  createdOn?: string;
-  modifiedOn?: string;
-}
-
 @Component({
-  selector: "app-idp",
+  selector: "app-tenants",
   standalone: true,
   imports: [
     CommonModule,
@@ -63,21 +32,20 @@ export interface IdentityProvider {
     AgGridAngular,
     ConfirmModalComponent,
     NotificationModalComponent,
+    AssignPermissionsModalComponent,
   ],
-  templateUrl: "./idp.component.html",
-  styleUrls: ["./idp.component.scss"],
+  templateUrl: "./tenants.component.html",
+  styleUrls: ["./tenants.component.scss"],
 })
-export class IdpComponent implements OnInit {
+export class TenantsComponent implements OnInit {
   // =========================================================
   // DATA
   // =========================================================
 
-  rows: IdentityProvider[] = [];
+  rows: any[] = [];
 
   search = "";
   status = "";
-  providerType = "";
-  tenantUuid = "";
 
   // Server-side pagination state — the API paginates (page/limit/totalItems/
   // totalPages), so AG Grid's built-in pager can't be used as-is: it only
@@ -88,20 +56,11 @@ export class IdpComponent implements OnInit {
   totalItems = 0;
   totalPages = 1;
 
-  // =========================================================
-  // TENANTS
-  // =========================================================
-
-  tenants: Tenant[] = [];
-  loadingTenants = false;
-
   loading = false;
   saving = false;
   deleting = false;
-  testing = false;
 
-  selected: IdentityProvider | null = null;
-  testResult: any = null;
+  selected: any = null;
 
   // =========================================================
   // CONFIRM MODAL
@@ -110,7 +69,7 @@ export class IdpComponent implements OnInit {
   @ViewChild("confirmModal")
   confirmModal!: ConfirmModalComponent;
 
-  private pendingDeleteProvider: IdentityProvider | null = null;
+  private pendingDeleteTenant: any = null;
 
   // =========================================================
   // NOTIFICATION MODAL
@@ -120,27 +79,23 @@ export class IdpComponent implements OnInit {
   notificationModal!: NotificationModalComponent;
 
   // =========================================================
+  // ASSIGN PERMISSIONS MODAL
+  // =========================================================
+
+  @ViewChild("assignPermissionsModal")
+  assignPermissionsModal!: AssignPermissionsModalComponent;
+
+  // =========================================================
   // CREATE / EDIT
   // =========================================================
 
   formOpen = false;
   editMode = false;
 
-  form: Partial<IdentityProvider> = this.getEmptyForm();
-  scopesText = "";
-
-  // =========================================================
-  // STATIC PROVIDER TYPES
-  // =========================================================
-
-  readonly providerTypes: string[] = [
-    "OIDC",
-    "SAML",
-    "AUTH0",
-    "OKTA",
-    "COGNITO",
-    "AZURE_AD",
-  ];
+  form = {
+    tenantUuid: "",
+    tenantName: ""
+  };
 
   // =========================================================
   // AG GRID
@@ -150,22 +105,20 @@ export class IdpComponent implements OnInit {
 
   columnDefs: ColDef[] = [
     {
-      headerName: "Provider",
-      field: "providerName",
+      headerName: "Tenant UUID",
+      field: "tenant_uuid",
       flex: 1.5,
       minWidth: 220,
       sortable: true,
       filter: true,
       cellRenderer: (params: ICellRendererParams) => {
-        const provider = params.data;
+        const tenant = params.data;
 
-        const name = provider?.providerName || "—";
-        const code = provider?.providerCode || "—";
+        const tenantUuid = tenant?.tenant_uuid || tenant?.tenantUuid || "—";
 
         return `
-          <div class="ag-user-cell">
-            <strong>${this.escapeHtml(name)}</strong>
-            <small>${this.escapeHtml(code)}</small>
+          <div class="ag-tenant-cell">
+            <strong>${this.escapeHtml(tenantUuid)}</strong>
           </div>
         `;
       },
@@ -173,39 +126,22 @@ export class IdpComponent implements OnInit {
 
     {
       headerName: "Tenant",
-      flex: 1.1,
-      minWidth: 180,
-      sortable: false,
-      filter: false,
-      valueGetter: (params) => this.getTenantName(params.data?.tenantUuid),
-    },
-
-    {
-      headerName: "Type",
-      field: "providerType",
-      flex: 0.9,
-      minWidth: 130,
+      field: "tenant_name",
+      flex: 1.5,
+      minWidth: 220,
       sortable: true,
       filter: true,
-      valueFormatter: (params) => params.value || "—",
-    },
+      cellRenderer: (params: ICellRendererParams) => {
+        const tenant = params.data;
 
-    {
-      headerName: "Client ID",
-      field: "clientId",
-      flex: 1.2,
-      minWidth: 180,
-      sortable: true,
-      filter: true,
-      valueFormatter: (params) => params.value || "—",
-    },
+        const tenantName = tenant?.tenant_name || tenant?.tenantName || "—";
 
-    {
-      headerName: "Secret",
-      flex: 0.7,
-      minWidth: 110,
-      sortable: false,
-      valueGetter: (params) => (params.data?.hasSecret ? "Configured" : "Not set"),
+        return `
+          <div class="ag-tenant-cell">
+            <strong>${this.escapeHtml(tenantName)}</strong>
+          </div>
+        `;
+      },
     },
 
     {
@@ -223,9 +159,9 @@ export class IdpComponent implements OnInit {
 
         if (status === "ACTIVE") {
           className += " good";
-        } else if (status === "INACTIVE") {
+        } else if (status === "SUSPENDED") {
           className += " warning";
-        } else if (status === "DELETED") {
+        } else if (status === "INACTIVE" || status === "DELETED") {
           className += " danger";
         }
 
@@ -238,30 +174,22 @@ export class IdpComponent implements OnInit {
     },
 
     {
-      headerName: "Created",
-      flex: 1,
-      minWidth: 170,
-      sortable: true,
-      valueGetter: (params) => this.getCreatedDate(params.data),
-    },
-
-    {
       headerName: "Actions",
-      flex: 1.6,
-      minWidth: 260,
+      flex: 1.7,
+      minWidth: 250,
       sortable: false,
       filter: false,
 
       cellRenderer: (params: ICellRendererParams) => {
-        const provider = params.data;
+        const tenant = params.data;
 
-        const identityProviderId = provider?.identityProviderId;
+        const tenantUuid = tenant?.tenant_uuid || tenant?.tenantUuid;
 
-        if (!identityProviderId) {
+        if (!tenantUuid) {
           return "";
         }
 
-        const isDeleted = provider?.status === "DELETED";
+        const isDeleted = tenant?.status === "DELETED";
 
         if (isDeleted) {
           return `
@@ -276,8 +204,6 @@ export class IdpComponent implements OnInit {
             </div>
           `;
         }
-
-        const statusLabel = provider?.status === "ACTIVE" ? "Disable" : "Enable";
 
         return `
           <div class="ag-table-actions">
@@ -300,14 +226,6 @@ export class IdpComponent implements OnInit {
 
             <button
               type="button"
-              class="ag-action-btn edit"
-              data-action="status"
-            >
-              ${statusLabel}
-            </button>
-
-            <button
-              type="button"
               class="ag-action-btn delete"
               data-action="delete"
             >
@@ -320,13 +238,17 @@ export class IdpComponent implements OnInit {
 
       onCellClicked: (params) => {
         const target = params.event?.target as HTMLElement;
+
         if (!target) {
           return;
         }
+
         const action = target.getAttribute("data-action");
+
         if (!action) {
           return;
         }
+
         switch (action) {
           case "view":
             this.select(params.data);
@@ -336,12 +258,8 @@ export class IdpComponent implements OnInit {
             this.openEdit(params.data);
             break;
 
-          case "status":
-            this.toggleStatus(params.data);
-            break;
-
           case "delete":
-            this.deleteProvider(params.data);
+            this.deleteTenant(params.data);
             break;
         }
       },
@@ -361,8 +279,6 @@ export class IdpComponent implements OnInit {
     animateRows: true,
   };
 
-  private readonly API_URL = "/identity-providers";
-
   // =========================================================
   // CONSTRUCTOR
   // =========================================================
@@ -377,7 +293,6 @@ export class IdpComponent implements OnInit {
   // =========================================================
 
   ngOnInit(): void {
-    this.loadTenants();
     this.load();
   }
 
@@ -392,7 +307,7 @@ export class IdpComponent implements OnInit {
   }
 
   // =========================================================
-  // LOAD PROVIDERS
+  // LOAD ROLES
   // =========================================================
 
   load(page: number = this.page): void {
@@ -400,13 +315,11 @@ export class IdpComponent implements OnInit {
     this.page = page;
 
     this.api
-      .get<any>(this.API_URL, {
+      .get<any>("/tenants", {
         page: this.page,
         limit: this.limit,
         search: this.search,
         status: this.status,
-        providerType: this.providerType,
-        tenantUuid: this.tenantUuid,
       })
       .subscribe({
         next: (response) => {
@@ -437,10 +350,10 @@ export class IdpComponent implements OnInit {
 
         error: (error) => {
           this.loading = false;
-          console.error("Failed to load identity providers:", error);
+          console.error("Failed to load tenants:", error);
           this.notificationModal.open({
             type: "ERROR",
-            title: "Failed to load identity providers",
+            title: "Failed to load tenants",
             message: error,
             contentType: "TEXT",
             autoCloseAfter: 3000,
@@ -486,50 +399,14 @@ export class IdpComponent implements OnInit {
   }
 
   // =========================================================
-  // LOAD TENANTS
-  // =========================================================
-
-  loadTenants(): void {
-    this.loadingTenants = true;
-
-    this.api.get<any>("/tenants/list").subscribe({
-      next: (response) => {
-        this.tenants = response?.data || response?.items || [];
-        this.loadingTenants = false;
-      },
-      error: (error) => {
-        this.loadingTenants = false;
-        console.error("Failed to load tenants:", error);
-        this.notificationModal.open({
-          type: "ERROR",
-          title: "Failed to load tenants",
-          message: error,
-          contentType: "TEXT",
-          autoCloseAfter: 3000,
-        });
-      },
-    });
-  }
-
-  // =========================================================
-  // TENANT NAME LOOKUP
-  // =========================================================
-
-  getTenantName(tenantUuid?: string): string {
-    if (!tenantUuid) {
-      return "—";
-    }
-    const tenant = this.tenants.find((t) => t.tenantUuid === tenantUuid);
-    return tenant?.tenantName || tenantUuid;
-  }
-
-  // =========================================================
   // CREATE
   // =========================================================
 
   openCreate(): void {
     this.editMode = false;
+
     this.resetForm();
+
     this.formOpen = true;
   }
 
@@ -537,37 +414,51 @@ export class IdpComponent implements OnInit {
   // EDIT
   // =========================================================
 
-  openEdit(provider: IdentityProvider): void {
-    const identityProviderId = provider?.identityProviderId;
+  openEdit(tenant: any): void {
+    const tenantUuid = tenant?.tenant_uuid || tenant?.tenantUuid;
 
-    if (!identityProviderId) {
+    if (!tenantUuid) {
+      this.ui.show("Invalid tenant UUID");
       this.notificationModal.open({
         type: "WARNING",
-        title: "Failed to edit provider",
-        message: "Invalid identity provider ID",
+        title: "Failed to load tenants",
+        message: "Invalid tenant ID",
+        contentType: "TEXT",
+        autoCloseAfter: 3000,
+      });
+
+      return;
+    }
+
+    this.editMode = true;
+
+    this.form = {
+      tenantUuid: tenant?.tenant_uuid || tenant?.tenantUuid || "",
+      tenantName: tenant?.tenant_name || tenant?.tenantName || "",
+    };
+
+    this.formOpen = true;
+  }
+
+  // =========================================================
+  // ASSIGN PERMISSIONS
+  // =========================================================
+
+  openAssignPermissions(tenant: any): void {
+    const tenantUuid = tenant?.tenant_uuid || tenant?.tenantUuid;
+
+    if (!tenantUuid) {
+      this.notificationModal.open({
+        type: "WARNING",
+        title: "Assign permissions",
+        message: "Invalid tenant ID",
         contentType: "TEXT",
         autoCloseAfter: 3000,
       });
       return;
     }
 
-    this.editMode = true;
-    this.form = {
-      identityProviderId,
-      tenantUuid: provider.tenantUuid || "",
-      providerCode: provider.providerCode || "",
-      providerName: provider.providerName || "",
-      providerType: provider.providerType || "OIDC",
-      issuerUrl: provider.issuerUrl || "",
-      authorizationUrl: provider.authorizationUrl || "",
-      tokenUrl: provider.tokenUrl || "",
-      jwksUrl: provider.jwksUrl || "",
-      clientId: provider.clientId || "",
-      clientSecret: "",
-    };
-    this.scopesText = provider.scopes ? provider.scopes.join(", ") : "";
-
-    this.formOpen = true;
+    this.assignPermissionsModal.open(tenant);
   }
 
   // =========================================================
@@ -580,7 +471,9 @@ export class IdpComponent implements OnInit {
     }
 
     this.formOpen = false;
+
     this.editMode = false;
+
     this.resetForm();
   }
 
@@ -595,47 +488,31 @@ export class IdpComponent implements OnInit {
 
     this.saving = true;
 
-    const scopes = this.scopesText
-      ? this.scopesText
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean)
-      : [];
-
-    const request: Record<string, any> = {
-      tenantUuid: this.form.tenantUuid,
-      providerCode: (this.form.providerCode || "").trim(),
-      providerName: (this.form.providerName || "").trim(),
-      providerType: this.form.providerType,
-      issuerUrl: (this.form.issuerUrl || "").trim() || undefined,
-      authorizationUrl: (this.form.authorizationUrl || "").trim() || undefined,
-      tokenUrl: (this.form.tokenUrl || "").trim() || undefined,
-      jwksUrl: (this.form.jwksUrl || "").trim() || undefined,
-      clientId: (this.form.clientId || "").trim() || undefined,
-      scopes,
+    const request = {
+      tenantName: this.form.tenantName.trim(),
     };
-
-    // Only send clientSecret when the user actually typed a new one —
-    // an empty field on edit should never wipe out an existing secret.
-    const clientSecret = (this.form.clientSecret || "").trim();
-    if (clientSecret) {
-      request["clientSecret"] = clientSecret;
-    }
 
     // =======================================================
     // UPDATE
     // =======================================================
 
     if (this.editMode) {
-      const identityProviderId = this.form.identityProviderId;
+      const tenantUuid = this.form.tenantUuid;
 
-      if (!identityProviderId) {
+      if (!tenantUuid) {
         this.saving = false;
-        this.ui.show("Invalid identity provider ID");
+        this.notificationModal.open({
+          type: "WARNING",
+          title: "Failed to load tenants",
+          message: "Invalid tenant ID",
+          contentType: "TEXT",
+          autoCloseAfter: 3000,
+        });
+
         return;
       }
 
-      this.api.put<any>(`${this.API_URL}/${identityProviderId}`, request).subscribe({
+      this.api.put<any>(`/tenants/${tenantUuid}`, request).subscribe({
         next: () => {
           this.saving = false;
           this.formOpen = false;
@@ -643,19 +520,20 @@ export class IdpComponent implements OnInit {
           this.resetForm();
           this.notificationModal.open({
             type: "SUCCESS",
-            title: "Provider Updated",
-            message: "Identity provider updated successfully.",
+            title: "Failed to load tenants",
+            message: "Tenant updated successfully",
             contentType: "TEXT",
             autoCloseAfter: 3000,
           });
           this.load();
         },
+
         error: (error) => {
           this.saving = false;
-          console.error("Failed to update identity provider:", error);
+          console.error("Failed to update tenant:", error);
           this.notificationModal.open({
             type: "ERROR",
-            title: "Provider Update Failed",
+            title: "Failed to update tenant",
             message: error,
             contentType: "TEXT",
             autoCloseAfter: 3000,
@@ -670,15 +548,15 @@ export class IdpComponent implements OnInit {
     // CREATE
     // =======================================================
 
-    this.api.post<any>(this.API_URL, request).subscribe({
+    this.api.post<any>("/tenants", request).subscribe({
       next: () => {
         this.saving = false;
         this.formOpen = false;
         this.resetForm();
         this.notificationModal.open({
           type: "SUCCESS",
-          title: "Provider Created",
-          message: "Identity provider created successfully.",
+          title: "Failed to create tenant",
+          message: "Tenant created successfully",
           contentType: "TEXT",
           autoCloseAfter: 3000,
         });
@@ -687,10 +565,10 @@ export class IdpComponent implements OnInit {
 
       error: (error) => {
         this.saving = false;
-        console.error("Failed to create identity provider:", error);
+        console.error("Failed to create tenant:", error);
         this.notificationModal.open({
           type: "ERROR",
-          title: "Provider Creation Failed",
+          title: "Failed to create tenant",
           message: error,
           contentType: "TEXT",
           autoCloseAfter: 3000,
@@ -703,26 +581,26 @@ export class IdpComponent implements OnInit {
   // SOFT DELETE
   // =========================================================
 
-  deleteProvider(provider: IdentityProvider): void {
-    const identityProviderId = provider?.identityProviderId;
-    if (!identityProviderId) {
+  deleteTenant(tenant: any): void {
+    const tenantUuid = tenant?.tenant_uuid || tenant?.tenantUuid;
+    if (!tenantUuid) {
       this.notificationModal.open({
         type: "WARNING",
-        title: "Provider deletion",
-        message: "Invalid identity provider ID",
+        title: "Failed to delete tenant",
+        message: "Invalid tenant ID",
         contentType: "TEXT",
         autoCloseAfter: 3000,
       });
       return;
     }
-    const providerName = provider?.providerName || provider?.providerCode || "this provider";
-    this.pendingDeleteProvider = provider;
+    const tenantName = tenant?.tenant_name || tenant?.tenantName || "this tenant";
+    this.pendingDeleteTenant = tenant;
 
     this.confirmModal.open({
-      title: "Delete identity provider",
+      title: "Delete permission",
       message:
-        `Are you sure you want to delete "${providerName}"?\n\n` +
-        `The provider will be marked as DELETED and will not be physically removed.`,
+        `Are you sure you want to delete tenant "${tenantName}"?\n\n` +
+        `The tenant will be marked as DELETED and will not be physically removed.`,
       confirmText: "Delete",
       cancelText: "Cancel",
     });
@@ -732,91 +610,48 @@ export class IdpComponent implements OnInit {
    * Bound to the confirm-modal's (confirmed) output.
    * Runs the actual soft-delete once the user confirms.
    */
-  onDeleteProviderConfirmed(): void {
-    const provider = this.pendingDeleteProvider;
+  onDeleteTenantConfirmed(): void {
+    const tenant = this.pendingDeleteTenant;
 
-    this.pendingDeleteProvider = null;
-    if (!provider) {
+    this.pendingDeleteTenant = null;
+    if (!tenant) {
       return;
     }
-    const identityProviderId = provider?.identityProviderId;
+    const tenantUuid = tenant?.tenant_uuid || tenant?.tenantUuid;
 
-    if (!identityProviderId) {
-      this.ui.show("Invalid identity provider ID");
-      return;
-    }
-
-    this.deleting = true;
-    this.api.delete<any>(`${this.API_URL}/${identityProviderId}`).subscribe({
-      next: () => {
-        this.deleting = false;
-        this.notificationModal.open({
-          type: "SUCCESS",
-          title: "Provider deletion",
-          message: "Identity provider deleted successfully",
-          contentType: "TEXT",
-          autoCloseAfter: 3000,
-        });
-        this.load();
-      },
-      error: (error) => {
-        this.deleting = false;
-        console.error("Failed to delete identity provider:", error);
-        this.notificationModal.open({
-          type: "ERROR",
-          title: "Provider deletion",
-          message: "Failed to delete identity provider",
-          contentType: "TEXT",
-          autoCloseAfter: 3000,
-        });
-      },
-    });
-  }
-
-  /**
-   * Bound to the confirm-modal's (cancelled) output.
-   */
-  onDeleteProviderCancelled(): void {
-    this.pendingDeleteProvider = null;
-  }
-
-  // =========================================================
-  // ENABLE / DISABLE (status toggle)
-  // =========================================================
-
-  toggleStatus(provider: IdentityProvider): void {
-    const identityProviderId = provider?.identityProviderId;
-    if (!identityProviderId) {
+    if (!tenantUuid) {
       this.notificationModal.open({
         type: "WARNING",
-        title: "Provider status",
-        message: "Invalid identity provider ID",
+        title: "Failed to delete tenant",
+        message: "Invalid tenant ID",
         contentType: "TEXT",
         autoCloseAfter: 3000,
       });
       return;
     }
-
-    const newStatus = provider.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
-
+    this.deleting = true;
     this.api
-      .patch<any>(`${this.API_URL}/${identityProviderId}/status`, { status: newStatus })
+      .patch<any>(`/tenants/${tenantUuid}/status`, {
+        status: "DELETED",
+      })
       .subscribe({
         next: () => {
+          this.deleting = false;
           this.notificationModal.open({
-            type: "SUCCESS",
-            title: "Provider status",
-            message: `Identity provider ${newStatus === "ACTIVE" ? "enabled" : "disabled"} successfully.`,
+            type: "ERROR",
+            title: "Failed to delete tenant",
+            message: "Tenant deleted successfully",
             contentType: "TEXT",
             autoCloseAfter: 3000,
           });
           this.load();
         },
         error: (error) => {
-          console.error("Failed to update provider status:", error);
+          this.deleting = false;
+          console.error("Failed to delete tenant:", error);
           this.notificationModal.open({
             type: "ERROR",
-            title: "Provider status",
+            title: "Failed to delete tenant",
             message: error,
             contentType: "TEXT",
             autoCloseAfter: 3000,
@@ -825,45 +660,25 @@ export class IdpComponent implements OnInit {
       });
   }
 
-  // =========================================================
-  // TEST CONNECTION
-  // =========================================================
-
-  testProvider(identityProviderId?: number): void {
-    if (!identityProviderId) {
-      return;
-    }
-
-    this.testing = true;
-    this.testResult = null;
-
-    this.api.post<any>(`${this.API_URL}/${identityProviderId}/test`, {}).subscribe({
-      next: (response) => {
-        this.testResult = response?.data || response;
-        this.testing = false;
-      },
-      error: (error) => {
-        this.testing = false;
-        this.testResult = {
-          status: "FAILED",
-          error: error?.message || "Unable to reach identity provider",
-        };
-      },
-    });
+  /**
+   * Bound to the confirm-modal's (cancelled) output.
+   */
+  onDeleteTenantCancelled(): void {
+    this.pendingDeleteTenant = null;
   }
 
   // =========================================================
   // VIEW
   // =========================================================
 
-  select(provider: IdentityProvider): void {
-    const identityProviderId = provider?.identityProviderId;
+  select(tenant: any): void {
+    const tenantUuid = tenant?.tenant_uuid || tenant?.tenantUuid;
 
-    if (!identityProviderId) {
+    if (!tenantUuid) {
       this.notificationModal.open({
         type: "WARNING",
-        title: "Provider loading",
-        message: "Invalid identity provider ID",
+        title: "Failed to load tenant",
+        message: "Invalid tenant ID",
         contentType: "TEXT",
         autoCloseAfter: 3000,
       });
@@ -872,20 +687,18 @@ export class IdpComponent implements OnInit {
 
     this.loading = true;
 
-    this.api.get<any>(`${this.API_URL}/${identityProviderId}`).subscribe({
+    this.api.get<any>(`/tenants/${tenantUuid}`).subscribe({
       next: (response) => {
         this.selected = response?.data || response;
-        this.testResult = null;
         this.loading = false;
       },
-
       error: (error) => {
         this.loading = false;
-        console.error("Failed to load identity provider:", error);
+        console.error("Failed to load tenant:", error);
         this.notificationModal.open({
           type: "ERROR",
-          title: "Provider loading",
-          message: error,
+          title: "Failed to load tenant",
+          message: "Failed to load tenant details",
           contentType: "TEXT",
           autoCloseAfter: 3000,
         });
@@ -899,7 +712,6 @@ export class IdpComponent implements OnInit {
 
   closeDetails(): void {
     this.selected = null;
-    this.testResult = null;
   }
 
   // =========================================================
@@ -907,28 +719,8 @@ export class IdpComponent implements OnInit {
   // =========================================================
 
   validateForm(): boolean {
-    if (!this.form.tenantUuid) {
-      this.ui.show("Tenant is required");
-      return false;
-    }
-
-    // if (!this.form.providerCode?.trim()) {
-    //   this.ui.show("Provider code is required");
-    //   return false;
-    // }
-
-    // if (!/^[A-Z0-9_]+$/.test(this.form.providerCode.trim())) {
-    //   this.ui.show("Provider code may only contain uppercase letters, numbers and underscores");
-    //   return false;
-    // }
-
-    if (!this.form.providerName?.trim()) {
-      this.ui.show("Provider name is required");
-      return false;
-    }
-
-    if (!this.form.providerType) {
-      this.ui.show("Provider type is required");
+    if (!this.form.tenantName.trim()) {
+      this.ui.show("Tenant name is required");
       return false;
     }
 
@@ -936,39 +728,14 @@ export class IdpComponent implements OnInit {
   }
 
   // =========================================================
-  // CREATED DATE
-  // =========================================================
-
-  getCreatedDate(provider: any): string {
-    return provider?.created_on || provider?.createdOn || provider?.createdAt || "—";
-  }
-
-  // =========================================================
-  // EMPTY FORM
-  // =========================================================
-
-  getEmptyForm(): Partial<IdentityProvider> {
-    return {
-      tenantUuid: "",
-      providerCode: "",
-      providerName: "",
-      providerType: "OIDC",
-      issuerUrl: "",
-      authorizationUrl: "",
-      tokenUrl: "",
-      jwksUrl: "",
-      clientId: "",
-      clientSecret: "",
-    };
-  }
-
-  // =========================================================
   // RESET FORM
   // =========================================================
 
   resetForm(): void {
-    this.form = this.getEmptyForm();
-    this.scopesText = "";
+    this.form = {
+      tenantUuid: "",
+      tenantName: "",
+    };
   }
 
   // =========================================================

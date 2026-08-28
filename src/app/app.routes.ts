@@ -22,7 +22,8 @@ export const routes: Routes = [
       { path: 'security-policy', loadComponent: () => import('./features/security-policy/security-policy.component').then(m => m.SecurityPolicyComponent) },
       { path: 'auth-config', loadComponent: () => import('./features/auth-config/auth-config.component').then(m => m.AuthConfigComponent) },
       { path: 'audit-logs', loadComponent: () => import('./features/audit/audit.component').then(m => m.AuditComponent) },
-      { path: 'sessions', loadComponent: () => import('./features/sessions/sessions.component').then(m => m.SessionsComponent) }
+      { path: 'sessions', loadComponent: () => import('./features/sessions/sessions.component').then(m => m.SessionsComponent) },
+      { path: 'tenants', loadComponent: () => import('./features/tenants/tenants.component').then(m => m.TenantsComponent) }
     ]
   },
   { path: '**', redirectTo: '' }

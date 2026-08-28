@@ -444,7 +444,7 @@ export class UsersComponent implements OnInit {
   loadTenants(): void {
     this.loadingTenants = true;
 
-    this.api.get<any>("/tenants").subscribe({
+    this.api.get<any>("/tenants/list").subscribe({
       next: (response) => {
         this.tenants = response?.data || response?.items || [];
         this.loadingTenants = false;
