@@ -44,6 +44,18 @@ export class RolesComponent implements OnInit {
 
   rows: any[] = [];
 
+  search = "";
+  status = "";
+
+  // Server-side pagination state — the API paginates (page/limit/totalItems/
+  // totalPages), so AG Grid's built-in pager can't be used as-is: it only
+  // paginates whatever rows are already loaded, but a given response only
+  // ever holds one page's worth (<= limit) out of totalItems.
+  page = 1;
+  limit = 20;
+  totalItems = 0;
+  totalPages = 1;
+
   loading = false;
   saving = false;
   deleting = false;
@@ -319,13 +331,16 @@ export class RolesComponent implements OnInit {
   // LOAD ROLES
   // =========================================================
 
-  load(): void {
+  load(page: number = this.page): void {
     this.loading = true;
+    this.page = page;
 
     this.api
       .get<any>("/authorization/roles", {
-        page: 1,
-        limit: 100,
+        page: this.page,
+        limit: this.limit,
+        search: this.search,
+        status: this.status,
       })
       .subscribe({
         next: (response) => {
@@ -335,6 +350,12 @@ export class RolesComponent implements OnInit {
             response?.data ||
             response?.rows ||
             [];
+
+          const pagination = response?.pagination;
+          this.page = pagination?.page ?? this.page;
+          this.limit = pagination?.limit ?? this.limit;
+          this.totalItems = pagination?.totalItems ?? this.rows.length;
+          this.totalPages = pagination?.totalPages ?? 1;
 
           this.loading = false;
 
@@ -360,6 +381,42 @@ export class RolesComponent implements OnInit {
           });
         },
       });
+  }
+
+  // =========================================================
+  // FILTER CHANGES (reset to page 1 — a stale page number could
+  // otherwise land past the end of a newly-filtered result set)
+  // =========================================================
+
+  onFilterChange(): void {
+    this.load(1);
+  }
+
+  // =========================================================
+  // PAGINATION CONTROLS
+  // =========================================================
+
+  goToPage(page: number): void {
+    if (page < 1 || page > this.totalPages || page === this.page || this.loading) {
+      return;
+    }
+    this.load(page);
+  }
+
+  get hasPreviousPage(): boolean {
+    return this.page > 1;
+  }
+
+  get hasNextPage(): boolean {
+    return this.page < this.totalPages;
+  }
+
+  get rangeStart(): number {
+    return this.totalItems === 0 ? 0 : (this.page - 1) * this.limit + 1;
+  }
+
+  get rangeEnd(): number {
+    return Math.min(this.page * this.limit, this.totalItems);
   }
 
   // =========================================================

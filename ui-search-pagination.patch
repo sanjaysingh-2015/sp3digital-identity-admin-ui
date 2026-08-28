@@ -1,0 +1,827 @@
+diff --git a/src/app/features/idp/idp.component.html b/src/app/features/idp/idp.component.html
+index dfed04c..69fea1d 100644
+--- a/src/app/features/idp/idp.component.html
++++ b/src/app/features/idp/idp.component.html
+@@ -21,12 +21,12 @@
+   <input
+     type="text"
+     [(ngModel)]="search"
+-    (keyup.enter)="load()"
++    (keyup.enter)="onFilterChange()"
+     placeholder="Search provider name or type"
+   />
+   <select
+     [(ngModel)]="tenantUuid"
+-    (change)="load()"
++    (change)="onFilterChange()"
+   >
+     <option value="">All tenants</option>
+     @for (tenant of tenants; track tenant.tenantUuid) {
+@@ -35,7 +35,7 @@
+   </select>
+   <select
+     [(ngModel)]="providerType"
+-    (change)="load()"
++    (change)="onFilterChange()"
+   >
+     <option value="">All types</option>
+     @for (type of providerTypes; track type) {
+@@ -44,7 +44,7 @@
+   </select>
+   <select
+     [(ngModel)]="status"
+-    (change)="load()"
++    (change)="onFilterChange()"
+   >
+     <option value="">All statuses</option>
+     <option value="ACTIVE">ACTIVE</option>
+@@ -78,6 +78,40 @@
+     (gridReady)="onGridReady($event)"
+   >
+   </ag-grid-angular>
++
++  <!-- =========================================================
++       PAGER (server-side — one API page loaded per navigation)
++  ========================================================= -->
++  <div class="pager">
++    <span class="pager-summary">
++      @if (totalItems > 0) {
++        Showing {{ rangeStart }}–{{ rangeEnd }} of {{ totalItems }}
++      } @else {
++        No results
++      }
++    </span>
++    <div class="pager-controls">
++      <button
++        type="button"
++        class="secondary"
++        (click)="goToPage(page - 1)"
++        [disabled]="!hasPreviousPage || loading"
++      >
++        Previous
++      </button>
++      <span class="pager-page">
++        Page {{ page }} of {{ totalPages }}
++      </span>
++      <button
++        type="button"
++        class="secondary"
++        (click)="goToPage(page + 1)"
++        [disabled]="!hasNextPage || loading"
++      >
++        Next
++      </button>
++    </div>
++  </div>
+ </div>
+ 
+ <!-- =========================================================
+diff --git a/src/app/features/idp/idp.component.scss b/src/app/features/idp/idp.component.scss
+index 8161995..ee1d37a 100644
+--- a/src/app/features/idp/idp.component.scss
++++ b/src/app/features/idp/idp.component.scss
+@@ -129,6 +129,54 @@ button:disabled {
+   height: 620px;
+ }
+ 
++/* =========================================================
++   PAGER
++========================================================= */
++
++.pager {
++  display: flex;
++
++  align-items: center;
++
++  justify-content: space-between;
++
++  gap: 16px;
++
++  padding: 14px 16px;
++
++  border-top: 1px solid var(--border-color, #e5e7eb);
++}
++
++.pager-summary {
++  color: #64748b;
++
++  font-size: 13px;
++}
++
++.pager-controls {
++  display: flex;
++
++  align-items: center;
++
++  gap: 12px;
++}
++
++.pager-controls .secondary {
++  padding: 6px 14px;
++
++  font-size: 13px;
++}
++
++.pager-page {
++  color: #374151;
++
++  font-size: 13px;
++
++  font-weight: 600;
++
++  white-space: nowrap;
++}
++
+ /* =========================================================
+    AG GRID CUSTOM CELL CONTENT
+ ========================================================= */
+@@ -627,6 +675,18 @@ button:disabled {
+     min-width: 0;
+   }
+ 
++  .pager {
++    flex-direction: column;
++
++    align-items: stretch;
++
++    gap: 10px;
++  }
++
++  .pager-controls {
++    justify-content: space-between;
++  }
++
+   .form-grid {
+     grid-template-columns: 1fr;
+   }
+diff --git a/src/app/features/idp/idp.component.ts b/src/app/features/idp/idp.component.ts
+index 4010b91..a360d44 100644
+--- a/src/app/features/idp/idp.component.ts
++++ b/src/app/features/idp/idp.component.ts
+@@ -79,6 +79,15 @@ export class IdpComponent implements OnInit {
+   providerType = "";
+   tenantUuid = "";
+ 
++  // Server-side pagination state — the API paginates (page/limit/totalItems/
++  // totalPages), so AG Grid's built-in pager can't be used as-is: it only
++  // paginates whatever rows are already loaded, but a given response only
++  // ever holds one page's worth (<= limit) out of totalItems.
++  page = 1;
++  limit = 20;
++  totalItems = 0;
++  totalPages = 1;
++
+   // =========================================================
+   // TENANTS
+   // =========================================================
+@@ -386,13 +395,14 @@ export class IdpComponent implements OnInit {
+   // LOAD PROVIDERS
+   // =========================================================
+ 
+-  load(): void {
++  load(page: number = this.page): void {
+     this.loading = true;
++    this.page = page;
+ 
+     this.api
+       .get<any>(this.API_URL, {
+-        page: 1,
+-        limit: 50,
++        page: this.page,
++        limit: this.limit,
+         search: this.search,
+         status: this.status,
+         providerType: this.providerType,
+@@ -407,6 +417,12 @@ export class IdpComponent implements OnInit {
+             response?.rows ||
+             [];
+ 
++          const pagination = response?.pagination;
++          this.page = pagination?.page ?? this.page;
++          this.limit = pagination?.limit ?? this.limit;
++          this.totalItems = pagination?.totalItems ?? this.rows.length;
++          this.totalPages = pagination?.totalPages ?? 1;
++
+           this.loading = false;
+ 
+           // Refresh AG Grid
+@@ -433,6 +449,42 @@ export class IdpComponent implements OnInit {
+       });
+   }
+ 
++  // =========================================================
++  // FILTER CHANGES (reset to page 1 — a stale page number could
++  // otherwise land past the end of a newly-filtered result set)
++  // =========================================================
++
++  onFilterChange(): void {
++    this.load(1);
++  }
++
++  // =========================================================
++  // PAGINATION CONTROLS
++  // =========================================================
++
++  goToPage(page: number): void {
++    if (page < 1 || page > this.totalPages || page === this.page || this.loading) {
++      return;
++    }
++    this.load(page);
++  }
++
++  get hasPreviousPage(): boolean {
++    return this.page > 1;
++  }
++
++  get hasNextPage(): boolean {
++    return this.page < this.totalPages;
++  }
++
++  get rangeStart(): number {
++    return this.totalItems === 0 ? 0 : (this.page - 1) * this.limit + 1;
++  }
++
++  get rangeEnd(): number {
++    return Math.min(this.page * this.limit, this.totalItems);
++  }
++
+   // =========================================================
+   // LOAD TENANTS
+   // =========================================================
+diff --git a/src/app/features/permissions/permissions.component.html b/src/app/features/permissions/permissions.component.html
+index 2378a2b..7c4c9dc 100644
+--- a/src/app/features/permissions/permissions.component.html
++++ b/src/app/features/permissions/permissions.component.html
+@@ -5,6 +5,40 @@
+   </button>
+ </app-page>
+ 
++<!-- =========================================================
++     SEARCH / FILTER TOOLBAR
++========================================================= -->
++
++<div class="toolbar">
++  <input
++    type="text"
++    [(ngModel)]="search"
++    (keyup.enter)="onFilterChange()"
++    placeholder="Search permission name or description"
++  />
++  <select
++    [(ngModel)]="status"
++    (change)="onFilterChange()"
++  >
++    <option value="">All statuses</option>
++    <option value="ACTIVE">ACTIVE</option>
++    <option value="INACTIVE">INACTIVE</option>
++    <option value="DELETED">DELETED</option>
++  </select>
++  <button
++    type="button"
++    class="secondary"
++    (click)="load()"
++    [disabled]="loading"
++  >
++    @if (loading) {
++      Loading...
++    } @else {
++      Refresh
++    }
++  </button>
++</div>
++
+ <!-- =========================================================
+      AG GRID
+ ========================================================= -->
+@@ -12,6 +46,40 @@
+   <ag-grid-angular class="permissions-grid" [rowData]="rows" [columnDefs]="columnDefs" [defaultColDef]="defaultColDef"
+     [gridOptions]="gridOptions" (gridReady)="onGridReady($event)">
+   </ag-grid-angular>
++
++  <!-- =========================================================
++       PAGER (server-side — one API page loaded per navigation)
++  ========================================================= -->
++  <div class="pager">
++    <span class="pager-summary">
++      @if (totalItems > 0) {
++        Showing {{ rangeStart }}–{{ rangeEnd }} of {{ totalItems }}
++      } @else {
++        No results
++      }
++    </span>
++    <div class="pager-controls">
++      <button
++        type="button"
++        class="secondary"
++        (click)="goToPage(page - 1)"
++        [disabled]="!hasPreviousPage || loading"
++      >
++        Previous
++      </button>
++      <span class="pager-page">
++        Page {{ page }} of {{ totalPages }}
++      </span>
++      <button
++        type="button"
++        class="secondary"
++        (click)="goToPage(page + 1)"
++        [disabled]="!hasNextPage || loading"
++      >
++        Next
++      </button>
++    </div>
++  </div>
+ </div>
+ 
+ <!-- =========================================================
+diff --git a/src/app/features/permissions/permissions.component.scss b/src/app/features/permissions/permissions.component.scss
+index 207625b..695e40e 100644
+--- a/src/app/features/permissions/permissions.component.scss
++++ b/src/app/features/permissions/permissions.component.scss
+@@ -168,6 +168,54 @@ button:disabled {
+   height: 620px;
+ }
+ 
++/* =========================================================
++   PAGER
++========================================================= */
++
++.pager {
++  display: flex;
++
++  align-items: center;
++
++  justify-content: space-between;
++
++  gap: 16px;
++
++  padding: 14px 16px;
++
++  border-top: 1px solid var(--border-color, #e5e7eb);
++}
++
++.pager-summary {
++  color: #64748b;
++
++  font-size: 13px;
++}
++
++.pager-controls {
++  display: flex;
++
++  align-items: center;
++
++  gap: 12px;
++}
++
++.pager-controls .secondary {
++  padding: 6px 14px;
++
++  font-size: 13px;
++}
++
++.pager-page {
++  color: #374151;
++
++  font-size: 13px;
++
++  font-weight: 600;
++
++  white-space: nowrap;
++}
++
+ 
+ /* =========================================================
+    AG GRID CUSTOM CELL CONTENT
+@@ -669,6 +717,18 @@ select:disabled {
+ 
+ @media (max-width: 700px) {
+ 
++  .pager {
++    flex-direction: column;
++
++    align-items: stretch;
++
++    gap: 10px;
++  }
++
++  .pager-controls {
++    justify-content: space-between;
++  }
++
+   .form-grid {
+     grid-template-columns: 1fr;
+   }
+diff --git a/src/app/features/permissions/permissions.component.ts b/src/app/features/permissions/permissions.component.ts
+index c00caa5..ec51884 100644
+--- a/src/app/features/permissions/permissions.component.ts
++++ b/src/app/features/permissions/permissions.component.ts
+@@ -58,6 +58,18 @@ export class PermissionsComponent implements OnInit {
+ 
+   rows: any[] = [];
+ 
++  search = "";
++  status = "";
++
++  // Server-side pagination state — the API paginates (page/limit/totalItems/
++  // totalPages), so AG Grid's built-in pager can't be used as-is: it only
++  // paginates whatever rows are already loaded, but a given response only
++  // ever holds one page's worth (<= limit) out of totalItems.
++  page = 1;
++  limit = 20;
++  totalItems = 0;
++  totalPages = 1;
++
+   loading = false;
+   saving = false;
+   deleting = false;
+@@ -351,13 +363,16 @@ export class PermissionsComponent implements OnInit {
+   // LOAD PERMISSIONS
+   // =========================================================
+ 
+-  load(): void {
++  load(page: number = this.page): void {
+     this.loading = true;
++    this.page = page;
+ 
+     this.api
+       .get<any>("/authorization/permissions", {
+-        page: 1,
+-        limit: 100,
++        page: this.page,
++        limit: this.limit,
++        search: this.search,
++        status: this.status,
+       })
+       .subscribe({
+         next: (response) => {
+@@ -368,6 +383,12 @@ export class PermissionsComponent implements OnInit {
+             response?.rows ||
+             [];
+ 
++          const pagination = response?.pagination;
++          this.page = pagination?.page ?? this.page;
++          this.limit = pagination?.limit ?? this.limit;
++          this.totalItems = pagination?.totalItems ?? this.rows.length;
++          this.totalPages = pagination?.totalPages ?? 1;
++
+           this.loading = false;
+           // Refresh AG Grid
+           if (this.gridApi) {
+@@ -391,6 +412,42 @@ export class PermissionsComponent implements OnInit {
+       });
+   }
+ 
++  // =========================================================
++  // FILTER CHANGES (reset to page 1 — a stale page number could
++  // otherwise land past the end of a newly-filtered result set)
++  // =========================================================
++
++  onFilterChange(): void {
++    this.load(1);
++  }
++
++  // =========================================================
++  // PAGINATION CONTROLS
++  // =========================================================
++
++  goToPage(page: number): void {
++    if (page < 1 || page > this.totalPages || page === this.page || this.loading) {
++      return;
++    }
++    this.load(page);
++  }
++
++  get hasPreviousPage(): boolean {
++    return this.page > 1;
++  }
++
++  get hasNextPage(): boolean {
++    return this.page < this.totalPages;
++  }
++
++  get rangeStart(): number {
++    return this.totalItems === 0 ? 0 : (this.page - 1) * this.limit + 1;
++  }
++
++  get rangeEnd(): number {
++    return Math.min(this.page * this.limit, this.totalItems);
++  }
++
+   // =========================================================
+   // RESOURCE CATEGORIES
+   // =========================================================
+diff --git a/src/app/features/roles/roles.component.html b/src/app/features/roles/roles.component.html
+index 66b7b9e..8fcbbf4 100644
+--- a/src/app/features/roles/roles.component.html
++++ b/src/app/features/roles/roles.component.html
+@@ -13,6 +13,40 @@
+   </button>
+ </app-page>
+ 
++<!-- =========================================================
++     SEARCH / FILTER TOOLBAR
++========================================================= -->
++
++<div class="toolbar">
++  <input
++    type="text"
++    [(ngModel)]="search"
++    (keyup.enter)="onFilterChange()"
++    placeholder="Search role name or description"
++  />
++  <select
++    [(ngModel)]="status"
++    (change)="onFilterChange()"
++  >
++    <option value="">All statuses</option>
++    <option value="ACTIVE">ACTIVE</option>
++    <option value="INACTIVE">INACTIVE</option>
++    <option value="DELETED">DELETED</option>
++  </select>
++  <button
++    type="button"
++    class="secondary"
++    (click)="load()"
++    [disabled]="loading"
++  >
++    @if (loading) {
++      Loading...
++    } @else {
++      Refresh
++    }
++  </button>
++</div>
++
+ <!-- =========================================================
+      AG GRID
+ ========================================================= -->
+@@ -26,6 +60,40 @@
+     (gridReady)="onGridReady($event)"
+   >
+   </ag-grid-angular>
++
++  <!-- =========================================================
++       PAGER (server-side — one API page loaded per navigation)
++  ========================================================= -->
++  <div class="pager">
++    <span class="pager-summary">
++      @if (totalItems > 0) {
++        Showing {{ rangeStart }}–{{ rangeEnd }} of {{ totalItems }}
++      } @else {
++        No results
++      }
++    </span>
++    <div class="pager-controls">
++      <button
++        type="button"
++        class="secondary"
++        (click)="goToPage(page - 1)"
++        [disabled]="!hasPreviousPage || loading"
++      >
++        Previous
++      </button>
++      <span class="pager-page">
++        Page {{ page }} of {{ totalPages }}
++      </span>
++      <button
++        type="button"
++        class="secondary"
++        (click)="goToPage(page + 1)"
++        [disabled]="!hasNextPage || loading"
++      >
++        Next
++      </button>
++    </div>
++  </div>
+ </div>
+ 
+ <!-- =========================================================
+diff --git a/src/app/features/roles/roles.component.scss b/src/app/features/roles/roles.component.scss
+index 7207842..dd1b1df 100644
+--- a/src/app/features/roles/roles.component.scss
++++ b/src/app/features/roles/roles.component.scss
+@@ -109,6 +109,54 @@ button:disabled {
+   height: 620px;
+ }
+ 
++/* =========================================================
++   PAGER
++========================================================= */
++
++.pager {
++  display: flex;
++
++  align-items: center;
++
++  justify-content: space-between;
++
++  gap: 16px;
++
++  padding: 14px 16px;
++
++  border-top: 1px solid var(--border-color, #e5e7eb);
++}
++
++.pager-summary {
++  color: #64748b;
++
++  font-size: 13px;
++}
++
++.pager-controls {
++  display: flex;
++
++  align-items: center;
++
++  gap: 12px;
++}
++
++.pager-controls .secondary {
++  padding: 6px 14px;
++
++  font-size: 13px;
++}
++
++.pager-page {
++  color: #374151;
++
++  font-size: 13px;
++
++  font-weight: 600;
++
++  white-space: nowrap;
++}
++
+ 
+ /* =========================================================
+    AG GRID CUSTOM CELL CONTENT
+@@ -573,6 +621,18 @@ button:disabled {
+ 
+ @media (max-width: 700px) {
+ 
++  .pager {
++    flex-direction: column;
++
++    align-items: stretch;
++
++    gap: 10px;
++  }
++
++  .pager-controls {
++    justify-content: space-between;
++  }
++
+   .form-grid {
+     grid-template-columns: 1fr;
+   }
+diff --git a/src/app/features/roles/roles.component.ts b/src/app/features/roles/roles.component.ts
+index 2e105e7..0a08a4d 100644
+--- a/src/app/features/roles/roles.component.ts
++++ b/src/app/features/roles/roles.component.ts
+@@ -44,6 +44,18 @@ export class RolesComponent implements OnInit {
+ 
+   rows: any[] = [];
+ 
++  search = "";
++  status = "";
++
++  // Server-side pagination state — the API paginates (page/limit/totalItems/
++  // totalPages), so AG Grid's built-in pager can't be used as-is: it only
++  // paginates whatever rows are already loaded, but a given response only
++  // ever holds one page's worth (<= limit) out of totalItems.
++  page = 1;
++  limit = 20;
++  totalItems = 0;
++  totalPages = 1;
++
+   loading = false;
+   saving = false;
+   deleting = false;
+@@ -319,13 +331,16 @@ export class RolesComponent implements OnInit {
+   // LOAD ROLES
+   // =========================================================
+ 
+-  load(): void {
++  load(page: number = this.page): void {
+     this.loading = true;
++    this.page = page;
+ 
+     this.api
+       .get<any>("/authorization/roles", {
+-        page: 1,
+-        limit: 100,
++        page: this.page,
++        limit: this.limit,
++        search: this.search,
++        status: this.status,
+       })
+       .subscribe({
+         next: (response) => {
+@@ -336,6 +351,12 @@ export class RolesComponent implements OnInit {
+             response?.rows ||
+             [];
+ 
++          const pagination = response?.pagination;
++          this.page = pagination?.page ?? this.page;
++          this.limit = pagination?.limit ?? this.limit;
++          this.totalItems = pagination?.totalItems ?? this.rows.length;
++          this.totalPages = pagination?.totalPages ?? 1;
++
+           this.loading = false;
+ 
+           // Refresh AG Grid
+@@ -362,6 +383,42 @@ export class RolesComponent implements OnInit {
+       });
+   }
+ 
++  // =========================================================
++  // FILTER CHANGES (reset to page 1 — a stale page number could
++  // otherwise land past the end of a newly-filtered result set)
++  // =========================================================
++
++  onFilterChange(): void {
++    this.load(1);
++  }
++
++  // =========================================================
++  // PAGINATION CONTROLS
++  // =========================================================
++
++  goToPage(page: number): void {
++    if (page < 1 || page > this.totalPages || page === this.page || this.loading) {
++      return;
++    }
++    this.load(page);
++  }
++
++  get hasPreviousPage(): boolean {
++    return this.page > 1;
++  }
++
++  get hasNextPage(): boolean {
++    return this.page < this.totalPages;
++  }
++
++  get rangeStart(): number {
++    return this.totalItems === 0 ? 0 : (this.page - 1) * this.limit + 1;
++  }
++
++  get rangeEnd(): number {
++    return Math.min(this.page * this.limit, this.totalItems);
++  }
++
+   // =========================================================
+   // CREATE
+   // =========================================================
+diff --git a/src/app/features/users/users.component.html b/src/app/features/users/users.component.html
+index 4a1331d..ae3a044 100644
+--- a/src/app/features/users/users.component.html
++++ b/src/app/features/users/users.component.html
+@@ -9,14 +9,14 @@
+ ========================================================= -->
+ 
+ <div class="toolbar">
+-  <input type="text" [(ngModel)]="search" (keyup.enter)="load()" placeholder="Search username, name or email" />
+-  <select [(ngModel)]="tenantUuid" (change)="load()">
++  <input type="text" [(ngModel)]="search" (keyup.enter)="onFilterChange()" placeholder="Search username, name or email" />
++  <select [(ngModel)]="tenantUuid" (change)="onFilterChange()">
+     <option value="">All tenants</option>
+     @for (tenant of tenants; track tenant.tenantUuid) {
+     <option [value]="tenant.tenantUuid">{{ tenant.tenantName }}</option>
+     }
+   </select>
+-  <select [(ngModel)]="status" (change)="load()">
++  <select [(ngModel)]="status" (change)="onFilterChange()">
+     <option value="">All statuses</option>
+     <option value="ACTIVE">ACTIVE</option>
+     <option value="INACTIVE">INACTIVE</option>
+diff --git a/src/app/features/users/users.component.ts b/src/app/features/users/users.component.ts
+index 2f94dc1..8ccbe43 100644
+--- a/src/app/features/users/users.component.ts
++++ b/src/app/features/users/users.component.ts
+@@ -382,7 +382,7 @@ export class UsersComponent implements OnInit {
+ 
+     this.api
+       .get<any>("/users", {
+-        page: 1,
++        page: this.page,
+         limit: this.limit,
+         search: this.search,
+         status: this.status,
+@@ -428,6 +428,15 @@ export class UsersComponent implements OnInit {
+       });
+   }
+ 
++  // =========================================================
++  // FILTER CHANGES (reset to page 1 — a stale page number could
++  // otherwise land past the end of a newly-filtered result set)
++  // =========================================================
++
++  onFilterChange(): void {
++    this.load(1);
++  }
++
+   // =========================================================
+   // LOAD TENANTS
+   // =========================================================

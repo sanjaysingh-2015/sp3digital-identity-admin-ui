@@ -9,14 +9,14 @@
 ========================================================= -->
 
 <div class="toolbar">
-  <input type="text" [(ngModel)]="search" (keyup.enter)="load()" placeholder="Search username, name or email" />
-  <select [(ngModel)]="tenantUuid" (change)="load()">
+  <input type="text" [(ngModel)]="search" (keyup.enter)="onFilterChange()" placeholder="Search username, name or email" />
+  <select [(ngModel)]="tenantUuid" (change)="onFilterChange()">
     <option value="">All tenants</option>
     @for (tenant of tenants; track tenant.tenantUuid) {
     <option [value]="tenant.tenantUuid">{{ tenant.tenantName }}</option>
     }
   </select>
-  <select [(ngModel)]="status" (change)="load()">
+  <select [(ngModel)]="status" (change)="onFilterChange()">
     <option value="">All statuses</option>
     <option value="ACTIVE">ACTIVE</option>
     <option value="INACTIVE">INACTIVE</option>

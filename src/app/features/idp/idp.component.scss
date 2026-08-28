@@ -130,6 +130,54 @@ button:disabled {
 }
 
 /* =========================================================
+   PAGER
+========================================================= */
+
+.pager {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 16px;
+
+  padding: 14px 16px;
+
+  border-top: 1px solid var(--border-color, #e5e7eb);
+}
+
+.pager-summary {
+  color: #64748b;
+
+  font-size: 13px;
+}
+
+.pager-controls {
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+}
+
+.pager-controls .secondary {
+  padding: 6px 14px;
+
+  font-size: 13px;
+}
+
+.pager-page {
+  color: #374151;
+
+  font-size: 13px;
+
+  font-weight: 600;
+
+  white-space: nowrap;
+}
+
+/* =========================================================
    AG GRID CUSTOM CELL CONTENT
 ========================================================= */
 
@@ -625,6 +673,18 @@ button:disabled {
     width: 100%;
 
     min-width: 0;
+  }
+
+  .pager {
+    flex-direction: column;
+
+    align-items: stretch;
+
+    gap: 10px;
+  }
+
+  .pager-controls {
+    justify-content: space-between;
   }
 
   .form-grid {
