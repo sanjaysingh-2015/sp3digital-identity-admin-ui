@@ -630,27 +630,20 @@ button.link:hover:not(:disabled) {
 
 .panel {
   background: var(--panel);
-
   border: 1px solid var(--line);
-
   border-radius: var(--radius-md);
-
   box-shadow: var(--shadow-sm);
 }
 
 .panel-title {
   padding: 18px 20px;
-
   border-bottom: 1px solid var(--line);
 }
 
 .panel-title h3 {
   margin: 0;
-
   font-family: var(--font-family);
-
   font-size: 14px;
-
   font-weight: 600;
 }
 
@@ -660,65 +653,44 @@ button.link:hover:not(:disabled) {
 
 .stat-grid {
   display: grid;
-
   grid-template-columns: repeat(4, 1fr);
-
   gap: 16px;
-
   margin-bottom: 22px;
 }
 
 .stat-card {
   background: #ffffff;
-
   border: 1px solid var(--line);
-
   border-radius: var(--radius-md);
-
   padding: 18px;
-
   display: flex;
-
   gap: 14px;
-
   align-items: center;
 }
 
 .stat-card > span {
   width: 40px;
   height: 40px;
-
   border-radius: 9px;
-
   background: #eff0ff;
-
   color: #5558df;
-
   display: grid;
-
   place-items: center;
-
   font-size: 18px;
 }
 
 .stat-card small,
 .stat-card em {
   display: block;
-
   color: var(--muted);
-
   font-size: 11px;
-
   font-style: normal;
 }
 
 .stat-card strong {
   display: block;
-
   font-size: 23px;
-
   font-weight: 600;
-
   margin: 2px 0;
 }
 
@@ -728,9 +700,7 @@ button.link:hover:not(:disabled) {
 
 .grid-2 {
   display: grid;
-
   grid-template-columns: 1.35fr 1fr;
-
   gap: 20px;
 }
 
@@ -740,17 +710,11 @@ button.link:hover:not(:disabled) {
 
 .quick {
   display: flex;
-
   align-items: center;
-
   gap: 14px;
-
   padding: 14px 12px;
-
   border-radius: 8px;
-
   text-decoration: none;
-
   color: var(--ink);
 }
 
@@ -761,15 +725,10 @@ button.link:hover:not(:disabled) {
 .quick > b {
   width: 36px;
   height: 36px;
-
   background: #f0f1ff;
-
   color: #5558df;
-
   display: grid;
-
   place-items: center;
-
   border-radius: 8px;
 }
 
@@ -784,7 +743,6 @@ button.link:hover:not(:disabled) {
 
 .quick small {
   color: var(--muted);
-
   margin-top: 3px;
 }
 
@@ -802,23 +760,18 @@ button.link:hover:not(:disabled) {
 
 .claims div {
   padding: 10px 0;
-
   border-bottom: 1px solid #f0f1f3;
 }
 
 .claims small {
   display: block;
-
   color: var(--muted);
-
   font-size: 11px;
 }
 
 .claims strong {
   display: block;
-
   margin-top: 3px;
-
   word-break: break-all;
 }
 
@@ -828,20 +781,15 @@ button.link:hover:not(:disabled) {
 
 .toolbar {
   display: flex;
-
   align-items: center;
-
   gap: 10px;
-
   margin-bottom: 15px;
-
   flex-wrap: wrap;
 }
 
 .toolbar input,
 .toolbar select {
   flex: 1;
-
   max-width: 460px;
 }
 
@@ -861,25 +809,15 @@ input,
 textarea,
 select {
   border: 1px solid #d0d5dd;
-
   border-radius: var(--radius-sm);
-
   padding: 9px 11px;
-
   background: #ffffff;
-
   color: #101828;
-
   outline: none;
-
   font-family: var(--font-family);
-
   font-size: 14px;
-
   font-weight: 400;
-
   line-height: 1.4;
-
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease;
@@ -888,7 +826,6 @@ select {
 input::placeholder,
 textarea::placeholder {
   color: #98a2b3;
-
   font-family: var(--font-family);
 }
 
@@ -896,7 +833,6 @@ input:focus,
 textarea:focus,
 select:focus {
   border-color: #7779ef;
-
   box-shadow: 0 0 0 3px #7779ef18;
 }
 
@@ -904,9 +840,7 @@ input:disabled,
 textarea:disabled,
 select:disabled {
   background: #f2f4f7;
-
   color: #98a2b3;
-
   cursor: not-allowed;
 }
 

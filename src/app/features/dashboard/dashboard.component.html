@@ -1,0 +1,79 @@
+<app-page
+  eyebrow="OVERVIEW"
+  title="Identity Administration"
+  description="Control users, authorization, authentication providers and security policy from one console.">
+</app-page>
+
+<div class="stat-grid">
+  @for (s of stats; track s.label) {
+    <div class="stat-card">
+      <span>{{ s.icon }}</span>
+
+      <div>
+        <small>{{ s.label }}</small>
+        <strong>{{ s.value }}</strong>
+        <em>{{ s.hint }}</em>
+      </div>
+    </div>
+  }
+</div>
+
+<div class="grid-2">
+
+  <div class="panel">
+    <div class="panel-title">
+      <h3>Administration areas</h3>
+    </div>
+
+    <div class="quick-grid">
+      @for (q of quick; track q.title) {
+        <a
+          [routerLink]="q.link"
+          class="quick">
+
+          <b>{{ q.icon }}</b>
+
+          <span>
+            <strong>{{ q.title }}</strong>
+            <small>{{ q.text }}</small>
+          </span>
+
+          <i>→</i>
+        </a>
+      }
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">
+      <h3>JWT context</h3>
+    </div>
+
+    <div class="claims">
+
+      <div>
+        <small>Issuer</small>
+        <strong>{{ claims['iss'] || '—' }}</strong>
+      </div>
+
+      <div>
+        <small>Subject</small>
+        <strong>{{ claims['sub'] || '—' }}</strong>
+      </div>
+
+      <div>
+        <small>Tenant</small>
+        <strong>
+          {{ claims['tenant_uuid'] || claims['tid'] || '—' }}
+        </strong>
+      </div>
+
+      <div>
+        <small>Scopes</small>
+        <strong>{{ scopeText }}</strong>
+      </div>
+
+    </div>
+  </div>
+
+</div>
