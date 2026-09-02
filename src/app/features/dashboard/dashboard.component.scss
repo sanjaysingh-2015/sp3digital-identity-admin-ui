@@ -1,0 +1,126 @@
+
+/* =========================================================
+   PANELS
+========================================================= */
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.panel-title {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.panel-title h3 {
+  margin: 0;
+  font-family: var(--font-family);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* =========================================================
+   STATISTICS
+========================================================= */
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.stat-card {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.stat-card > span {
+  width: 30px !important;
+  height: 40px;
+  border-radius: 9px;
+  background: #eff0ff;
+  color: #5558df;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+}
+
+.stat-card small,
+.stat-card em {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-style: normal;
+}
+
+.stat-card strong {
+  display: block;
+  font-size: 23px;
+  font-weight: 600;
+  margin: 2px 0;
+}
+
+/* =========================================================
+   GRID
+========================================================= */
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 20px;
+}
+
+.quick-grid {
+  padding: 8px;
+}
+
+.quick {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.quick:hover {
+  background: #f7f8fc;
+}
+
+.quick > b {
+  width: 36px;
+  height: 36px;
+  background: #f0f1ff;
+  color: #5558df;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+}
+
+.quick span {
+  flex: 1;
+}
+
+.quick strong,
+.quick small {
+  display: block;
+}
+
+.quick small {
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+.quick i {
+  color: #98a2b3;
+}

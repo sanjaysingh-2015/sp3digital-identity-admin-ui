@@ -14,14 +14,14 @@ import { UiService } from '../core/ui.service';
       <nav>
         <a routerLink="/dashboard" routerLinkActive="active">▦ <span>Dashboard</span></a>
         <div class="nav-label">IDENTITY</div>
-        <a routerLink="/tenants" routerLinkActive="active">◉ <span>Tenants</span></a>
-        <a routerLink="/users" routerLinkActive="active">◉ <span>Users</span></a>
-        <a routerLink="/roles" routerLinkActive="active">◆ <span>Roles</span></a>
-        <a routerLink="/permissions" routerLinkActive="active">◇ <span>Permissions</span></a>
-        <a routerLink="/identity-providers" routerLinkActive="active">⇄ <span>Identity Providers</span></a>
+        <a routerLink="/tenants" routerLinkActive="active">▣ <span>Tenants</span></a>
+        <a routerLink="/users" routerLinkActive="active">♙ <span>Users</span></a>
+        <a routerLink="/roles" routerLinkActive="active">🔐 <span>Roles</span></a>
+        <a routerLink="/permissions" routerLinkActive="active">🛡 <span>Permissions</span></a>
+        <a routerLink="/identity-providers" routerLinkActive="active">📋 <span>Identity Providers</span></a>
         <a routerLink="/sessions" routerLinkActive="active">◷ <span>Sessions</span></a>
         <div class="nav-label">APPLICATIONS</div>
-        <a routerLink="/oauth-clients" routerLinkActive="active">▣ <span>OAuth / OIDC Clients</span></a>
+        <a routerLink="/oauth-clients" routerLinkActive="active">◆ <span>OAuth / OIDC Clients</span></a>
         <a routerLink="/api-clients" routerLinkActive="active">⌘ <span>API Clients</span></a>
         <a routerLink="/service-accounts" routerLinkActive="active">⚙ <span>Service Accounts</span></a>
         <div class="nav-label">SECURITY</div>
