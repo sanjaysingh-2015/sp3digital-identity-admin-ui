@@ -1,0 +1,55 @@
+<app-page eyebrow="SECURITY" title="Authentication Configuration" description="Tenant-level authentication behavior and provider selection.">
+</app-page>
+
+<div class="toolbar">
+  <select [(ngModel)]="tenantUuid" (change)="onTenantChange()">
+    <option value="" disabled>Select a tenant</option>
+    @for (tenant of tenants; track tenant.tenantUuid) {
+    <option [value]="tenant.tenantUuid">{{ tenant.tenantName }}</option>
+    }
+  </select>
+  <button type="button" class="secondary" (click)="load()" [disabled]="loading || !tenantUuid">
+    @if (loading) { Loading... } @else { Refresh }
+  </button>
+</div>
+
+<div class="panel form-panel">
+  @if (!tenantUuid) {
+  <div class="empty-state">Select a tenant above to view and edit its authentication configuration.</div>
+  } @else {
+  <div class="form-grid">
+    <label>
+      <span>Primary authentication mode</span>
+      <select [(ngModel)]="config.authenticationMode">
+        @for (mode of authenticationModes; track mode) {
+        <option [value]="mode">{{ mode }}</option>
+        }
+      </select>
+    </label>
+    <label>
+      <span>Default identity provider</span>
+      <input type="text" [(ngModel)]="config.defaultIdentityProviderId" placeholder="Identity provider ID" />
+    </label>
+    <label>
+      <span>Session policy</span>
+      <input type="text" [(ngModel)]="config.sessionPolicy" placeholder="e.g. SLIDING / FIXED" />
+    </label>
+    <label>
+      <span>Login channel</span>
+      <input type="text" [(ngModel)]="config.loginChannel" placeholder="e.g. WEB / MOBILE" />
+    </label>
+    <label class="check">
+      <input type="checkbox" [(ngModel)]="config.mfaEnabled" />
+      MFA enabled
+    </label>
+  </div>
+
+  <div class="modal-actions">
+    <button type="button" class="primary" (click)="save()" [disabled]="saving">
+      @if (saving) { Saving... } @else { Save configuration }
+    </button>
+  </div>
+  }
+</div>
+
+<app-notification-modal #notificationModal></app-notification-modal>
