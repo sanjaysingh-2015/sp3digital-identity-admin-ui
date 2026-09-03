@@ -1,0 +1,44 @@
+<app-page eyebrow="SECURITY" title="Security Policy" description="Password, lockout, token, session and MFA controls.">
+  <button actions type="button" class="secondary" (click)="load()" [disabled]="loading">
+    @if (loading) { Loading... } @else { Refresh }
+  </button>
+</app-page>
+
+<div class="panel form-panel">
+  <div class="form-grid policy">
+    @for (f of fields; track f.key) {
+    <label>
+      <span>{{ f.label }}</span>
+      <input type="number" [(ngModel)]="policy[f.key]" />
+    </label>
+    }
+    <label class="check">
+      <input type="checkbox" [(ngModel)]="policy.requireUppercase" />
+      Require uppercase
+    </label>
+    <label class="check">
+      <input type="checkbox" [(ngModel)]="policy.requireLowercase" />
+      Require lowercase
+    </label>
+    <label class="check">
+      <input type="checkbox" [(ngModel)]="policy.requireNumber" />
+      Require number
+    </label>
+    <label class="check">
+      <input type="checkbox" [(ngModel)]="policy.requireSpecialCharacter" />
+      Require special character
+    </label>
+    <label class="check">
+      <input type="checkbox" [(ngModel)]="policy.mfaRequired" />
+      MFA required
+    </label>
+  </div>
+
+  <div class="modal-actions">
+    <button type="button" class="primary" (click)="save()" [disabled]="saving">
+      @if (saving) { Saving... } @else { Save security policy }
+    </button>
+  </div>
+</div>
+
+<app-notification-modal #notificationModal></app-notification-modal>

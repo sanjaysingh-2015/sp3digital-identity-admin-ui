@@ -1,7 +1,97 @@
-import { Component } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { ApiService } from '../../core/api.service';
-import { UiService } from '../../core/ui.service';
-import { PageComponent } from '../../shared/page.component';
-@Component({standalone:true,imports:[FormsModule,PageComponent],template:`<app-page eyebrow="SECURITY" title="Security Policy" description="Password, lockout, token, session and MFA controls."/><div class="panel form-panel"><div class="form-grid policy">@for(f of fields;track f.key){<label>{{f.label}}<input type="number" [(ngModel)]="policy[f.key]"></label>}<label class="check"><input type="checkbox" [(ngModel)]="policy.requireUppercase"> Require uppercase</label><label class="check"><input type="checkbox" [(ngModel)]="policy.requireLowercase"> Require lowercase</label><label class="check"><input type="checkbox" [(ngModel)]="policy.requireNumber"> Require number</label><label class="check"><input type="checkbox" [(ngModel)]="policy.requireSpecialCharacter"> Require special character</label><label class="check"><input type="checkbox" [(ngModel)]="policy.mfaRequired"> MFA required</label></div><div class="modal-actions"><button class="primary" (click)="save()">Save security policy</button></div></div>`})
-export class SecurityPolicyComponent {policy:any={};fields=[{key:'minPasswordLength',label:'Minimum password length'},{key:'passwordHistoryCount',label:'Password history count'},{key:'passwordMaxAgeDays',label:'Password max age (days)'},{key:'maxFailedAttempts',label:'Max failed attempts'},{key:'lockoutDurationMinutes',label:'Lockout duration (minutes)'},{key:'accessTokenLifetimeMinutes',label:'Access token lifetime (minutes)'},{key:'refreshTokenLifetimeDays',label:'Refresh token lifetime (days)'},{key:'maxSessionDurationMinutes',label:'Max session duration (minutes)'},{key:'maxConcurrentSessions',label:'Max concurrent sessions'}];constructor(private api:ApiService,private ui:UiService){api.get<any>('/security-policy').subscribe({next:r=>this.policy=r?.data||r})}save(){this.api.post('/security-policy',this.policy).subscribe({next:()=>this.ui.show('Security policy updated')})}}
+import { Component, OnInit, ViewChild } from "@angular/core";
+import { CommonModule } from "@angular/common";
+import { FormsModule } from "@angular/forms";
+
+import { ApiService } from "../../core/api.service";
+import { PageComponent } from "../../shared/page.component";
+import { NotificationModalComponent } from "../../shared/components/notification-modal/notification-modal";
+
+interface PolicyField {
+  key: string;
+  label: string;
+}
+
+@Component({
+  selector: "app-security-policy",
+  standalone: true,
+  imports: [CommonModule, FormsModule, PageComponent, NotificationModalComponent],
+  templateUrl: "./security-policy.component.html",
+  styleUrls: ["./security-policy.component.scss"],
+})
+export class SecurityPolicyComponent implements OnInit {
+  loading = false;
+  saving = false;
+
+  policy: any = {};
+
+  readonly fields: PolicyField[] = [
+    { key: "minPasswordLength", label: "Minimum password length" },
+    { key: "passwordHistoryCount", label: "Password history count" },
+    { key: "passwordMaxAgeDays", label: "Password max age (days)" },
+    { key: "maxFailedAttempts", label: "Max failed attempts" },
+    { key: "lockoutDurationMinutes", label: "Lockout duration (minutes)" },
+    { key: "accessTokenLifetimeMinutes", label: "Access token lifetime (minutes)" },
+    { key: "refreshTokenLifetimeDays", label: "Refresh token lifetime (days)" },
+    { key: "maxSessionDurationMinutes", label: "Max session duration (minutes)" },
+    { key: "maxConcurrentSessions", label: "Max concurrent sessions" },
+  ];
+
+  @ViewChild("notificationModal")
+  notificationModal!: NotificationModalComponent;
+
+  constructor(private api: ApiService) {}
+
+  ngOnInit(): void {
+    this.load();
+  }
+
+  load(): void {
+    this.loading = true;
+
+    this.api.get<any>("/security-policy").subscribe({
+      next: (response) => {
+        this.policy = response?.data || response || {};
+        this.loading = false;
+      },
+      error: (error) => {
+        this.loading = false;
+        console.error("Failed to load security policy:", error);
+        this.notificationModal.open({
+          type: "ERROR",
+          title: "Failed to load security policy",
+          message: error,
+          contentType: "TEXT",
+          autoCloseAfter: 3000,
+        });
+      },
+    });
+  }
+
+  save(): void {
+    this.saving = true;
+
+    this.api.post<any>("/security-policy", this.policy).subscribe({
+      next: () => {
+        this.saving = false;
+        this.notificationModal.open({
+          type: "SUCCESS",
+          title: "Security Policy Updated",
+          message: "Security policy updated successfully.",
+          contentType: "TEXT",
+          autoCloseAfter: 3000,
+        });
+      },
+      error: (error) => {
+        this.saving = false;
+        console.error("Failed to update security policy:", error);
+        this.notificationModal.open({
+          type: "ERROR",
+          title: "Security Policy Update Failed",
+          message: error,
+          contentType: "TEXT",
+          autoCloseAfter: 3000,
+        });
+      },
+    });
+  }
+}

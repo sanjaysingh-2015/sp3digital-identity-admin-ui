@@ -1,8 +1,154 @@
-import { Component } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { ApiService } from '../../core/api.service';
-import { AuthService } from '../../core/auth.service';
-import { UiService } from '../../core/ui.service';
-import { PageComponent } from '../../shared/page.component';
-@Component({standalone:true,imports:[FormsModule,PageComponent],template:`<app-page eyebrow="SECURITY" title="Authentication Configuration" description="Tenant-level authentication behavior and provider selection."/><div class="panel form-panel"><div class="form-grid"><label>Primary authentication mode<input [(ngModel)]="config.authenticationMode" placeholder="PASSWORD / OIDC / SSO"></label><label>Default identity provider<input [(ngModel)]="config.defaultIdentityProviderId"></label><label>Session policy<input [(ngModel)]="config.sessionPolicy"></label><label>Login channel<input [(ngModel)]="config.loginChannel"></label><label class="check"><input type="checkbox" [(ngModel)]="config.mfaEnabled"> MFA enabled</label></div><div class="modal-actions"><button class="primary" (click)="save()">Save configuration</button></div></div>`})
-export class AuthConfigComponent {config:any={};constructor(private api:ApiService,private auth:AuthService,private ui:UiService){const t=auth.tenantUuid();if(t)api.get<any>(`/auth-configs/${t}`).subscribe({next:r=>this.config=r?.data||r})}save(){const t=this.auth.tenantUuid();if(!t)return;this.api.put(`/auth-configs/${t}`,this.config).subscribe({next:()=>this.ui.show('Authentication configuration updated')})}}
+import { Component, OnInit, ViewChild } from "@angular/core";
+import { CommonModule } from "@angular/common";
+import { FormsModule } from "@angular/forms";
+
+import { ApiService } from "../../core/api.service";
+import { AuthService } from "../../core/auth.service";
+import { PageComponent } from "../../shared/page.component";
+import { NotificationModalComponent } from "../../shared/components/notification-modal/notification-modal";
+
+export interface Tenant {
+  tenantUuid: string;
+  tenantCode: string;
+  tenantName: string;
+  status?: string;
+}
+
+@Component({
+  selector: "app-auth-config",
+  standalone: true,
+  imports: [CommonModule, FormsModule, PageComponent, NotificationModalComponent],
+  templateUrl: "./auth-config.component.html",
+  styleUrls: ["./auth-config.component.scss"],
+})
+export class AuthConfigComponent implements OnInit {
+  tenants: Tenant[] = [];
+  loadingTenants = false;
+  tenantUuid = "";
+
+  loading = false;
+  saving = false;
+
+  readonly authenticationModes: string[] = ["PASSWORD", "OIDC", "SSO"];
+
+  config: any = {
+    authenticationMode: "PASSWORD",
+    defaultIdentityProviderId: "",
+    sessionPolicy: "",
+    loginChannel: "",
+    mfaEnabled: false,
+  };
+
+  @ViewChild("notificationModal")
+  notificationModal!: NotificationModalComponent;
+
+  constructor(
+    private api: ApiService,
+    private auth: AuthService,
+  ) {}
+
+  ngOnInit(): void {
+    this.loadTenants();
+
+    // Default to the currently authenticated tenant, if one is present in
+    // the JWT, and load its configuration straight away.
+    const currentTenant = this.auth.tenantUuid();
+    if (currentTenant) {
+      this.tenantUuid = currentTenant;
+      this.load();
+    }
+  }
+
+  loadTenants(): void {
+    this.loadingTenants = true;
+
+    this.api.get<any>("/tenants/list").subscribe({
+      next: (response) => {
+        this.tenants = response?.data || response?.items || [];
+        this.loadingTenants = false;
+      },
+      error: (error) => {
+        this.loadingTenants = false;
+        console.error("Failed to load tenants:", error);
+      },
+    });
+  }
+
+  onTenantChange(): void {
+    if (this.tenantUuid) {
+      this.load();
+    }
+  }
+
+  load(): void {
+    if (!this.tenantUuid) {
+      return;
+    }
+
+    this.loading = true;
+
+    this.api.get<any>(`/auth-configs/${this.tenantUuid}`).subscribe({
+      next: (response) => {
+        this.config = {
+          authenticationMode: "PASSWORD",
+          defaultIdentityProviderId: "",
+          sessionPolicy: "",
+          loginChannel: "",
+          mfaEnabled: false,
+          ...(response?.data || response || {}),
+        };
+        this.loading = false;
+      },
+      error: (error) => {
+        this.loading = false;
+        console.error("Failed to load authentication configuration:", error);
+        this.notificationModal.open({
+          type: "ERROR",
+          title: "Failed to load configuration",
+          message: error,
+          contentType: "TEXT",
+          autoCloseAfter: 3000,
+        });
+      },
+    });
+  }
+
+  save(): void {
+    if (!this.tenantUuid) {
+      this.notificationModal.open({
+        type: "WARNING",
+        title: "Authentication configuration",
+        message: "Select a tenant first.",
+        contentType: "TEXT",
+        autoCloseAfter: 3000,
+      });
+      return;
+    }
+
+    this.saving = true;
+
+    this.api.put<any>(`/auth-configs/${this.tenantUuid}`, this.config).subscribe({
+      next: () => {
+        this.saving = false;
+        this.notificationModal.open({
+          type: "SUCCESS",
+          title: "Configuration Updated",
+          message: "Authentication configuration updated successfully.",
+          contentType: "TEXT",
+          autoCloseAfter: 3000,
+        });
+      },
+      error: (error) => {
+        this.saving = false;
+        console.error("Failed to update authentication configuration:", error);
+        this.notificationModal.open({
+          type: "ERROR",
+          title: "Configuration Update Failed",
+          message: error,
+          contentType: "TEXT",
+          autoCloseAfter: 3000,
+        });
+      },
+    });
+  }
+}
