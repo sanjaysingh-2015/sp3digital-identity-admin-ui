@@ -126,9 +126,7 @@ export class UsersComponent implements OnInit {
   // STATIC USER TYPES
   // =========================================================
 
-  readonly userTypes: string[] = ["USER", "ADMIN", "SERVICE"];
-
-  // =========================================================
+  readonly userTypes: string[] = ["USER", "ADMIN", "SERVICE", "TENANT-ADMIN", "TENANT-USER"]
   // AG GRID
   // =========================================================
 
