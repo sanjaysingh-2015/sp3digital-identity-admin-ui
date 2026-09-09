@@ -137,7 +137,7 @@ export class UsersComponent implements OnInit {
       headerName: "User",
       field: "username",
       flex: 1.5,
-      minWidth: 220,
+      minWidth: 160,
       sortable: true,
       filter: true,
       cellRenderer: (params: ICellRendererParams) => {
@@ -154,7 +154,25 @@ export class UsersComponent implements OnInit {
         `;
       },
     },
+{
+      headerName: "Tenant",
+      field: "tenant.tenantName",
+      flex: 1.5,
+      minWidth: 160,
+      sortable: true,
+      filter: true,
+      cellRenderer: (params: ICellRendererParams) => {
+        const user = params.data;
 
+        const tenantName = user?.tenant?.tenantName || "—";
+
+        return `
+          <div class="ag-user-cell">
+            <small>${this.escapeHtml(tenantName)}</small>
+          </div>
+        `;
+      },
+    },
     {
       headerName: "Email",
       field: "email",
