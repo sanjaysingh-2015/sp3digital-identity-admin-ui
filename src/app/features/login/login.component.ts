@@ -1,5 +1,5 @@
 import { Component, OnInit, inject } from "@angular/core";
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from "@angular/forms";
 
 import {
@@ -17,7 +17,7 @@ import { AuthService, Tenant } from "../../core/auth.service";
 @Component({
   selector: "app-login",
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, RouterLink],
   templateUrl: "./login.component.html",
   styleUrl: "./login.component.scss",
 })
@@ -25,6 +25,7 @@ export class LoginComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   loading = false;
   tenantLoading = false;
@@ -32,6 +33,7 @@ export class LoginComponent implements OnInit {
   tenants: Tenant[] = [];
   showTenantList = false;
   errorMessage = "";
+  successMessage = "";
 
   loginForm = this.fb.group({
     usernameOrEmail: ["", Validators.required],
@@ -44,6 +46,14 @@ export class LoginComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    // Redirected here from the "Create Organization" wizard when the new
+    // tenant's security policy requires MFA (so registration couldn't
+    // auto-login) — the organization itself was still created fine.
+    if (this.route.snapshot.queryParamMap.get("organizationCreated") === "1") {
+      this.successMessage =
+        "Organization created successfully. Please sign in to continue.";
+    }
+
     this.loginForm.controls.tenant.valueChanges
       .pipe(
         debounceTime(400),

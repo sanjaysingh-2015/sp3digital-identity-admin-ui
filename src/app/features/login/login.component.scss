@@ -129,6 +129,32 @@
   font-size: 13px;
 }
 
+.login-success {
+  margin-bottom: 18px;
+  padding: 10px 12px;
+  background: #f0fdf4;
+  color: #15803d;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.register-footer {
+  margin-top: 22px;
+  text-align: center;
+  font-size: 13px;
+  color: #667085;
+
+  a {
+    color: #2563eb;
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
 button {
   width: 100%;
   padding: 13px;

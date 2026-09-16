@@ -32,6 +32,44 @@ export interface TenantSearchResponse {
   data: Tenant[];
 }
 
+export interface RegisterOrganizationRequest {
+  organizationName: string;
+  organizationType: string;
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  city?: string | null;
+  subDistrictName?: string | null;
+  districtName?: string | null;
+  stateName?: string | null;
+  country?: string | null;
+  postalCode?: string | null;
+  username: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  middleName?: string;
+  displayName?: string;
+  phoneCountryCode: string;
+  phoneNumber: string;
+  password: string;
+}
+
+export interface RegisterOrganizationResponse {
+  tokenType?: string;
+  accessToken?: string;
+  idToken?: string;
+  refreshToken?: string;
+  expiresIn?: number;
+  mfaRequired?: boolean;
+  mfaToken?: string;
+  tenantUuid: string;
+  tenantCode: string;
+  organizationId: number | null;
+  organizationUuid: string | null;
+  userId: number;
+  userUuid: string;
+}
+
 @Injectable({ providedIn: "root" })
 export class AuthService {
   private readonly key = "sp3_identity_admin_token";
@@ -69,6 +107,24 @@ export class AuthService {
           q: search,
         },
       },
+    );
+  }
+
+  /**
+   * Create Organization wizard (2 steps: Organization Details incl.
+   * address, then Administrator Detail) — public/unauthenticated, same as
+   * login, since this IS how a brand-new org gets its first tenant + user.
+   * On success the response carries tokens (auto-login) unless the
+   * tenant's security policy requires MFA, in which case it comes back as
+   * { mfaRequired: true, ... } instead — same two shapes /auth/login can
+   * return.
+   */
+  registerOrganization(
+    request: RegisterOrganizationRequest,
+  ): Observable<RegisterOrganizationResponse> {
+    return this.http.post<RegisterOrganizationResponse>(
+      `${this.apiBaseUrl}/public/register-organization`,
+      request,
     );
   }
 

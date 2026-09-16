@@ -122,6 +122,16 @@
             </div>
 
 
+            <!-- Success (e.g. redirected here after registering an organization) -->
+
+            @if (successMessage) {
+
+            <div class="login-success">
+                {{ successMessage }}
+            </div>
+
+            }
+
             <!-- Error -->
 
             @if (errorMessage) {
@@ -146,6 +156,10 @@
             </button>
 
         </form>
+
+        <div class="register-footer">
+            New organization? <a routerLink="/register-organization">Create one</a>
+        </div>
 
     </div>
 
