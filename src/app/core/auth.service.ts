@@ -37,12 +37,12 @@ export interface RegisterOrganizationRequest {
   organizationType: string;
   addressLine1?: string | null;
   addressLine2?: string | null;
-  city?: string | null;
-  subDistrictName?: string | null;
-  districtName?: string | null;
-  stateName?: string | null;
-  country?: string | null;
-  postalCode?: string | null;
+  cityId: number | null;
+  subDistrictId: number | null;
+  districtId: number | null;
+  stateId: number | null;
+  countryId: number | null;
+  postalCodeId: number | null;
   username: string;
   email: string;
   firstName: string;

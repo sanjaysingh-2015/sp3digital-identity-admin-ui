@@ -81,53 +81,89 @@
             </div>
 
             <div class="form-row">
-
                 <div class="form-group">
-                    <label for="city">City</label>
-                    <input id="city" type="text" formControlName="city" />
+                    <label for="countryId">Country</label>
+                    <select id="countryId" formControlName="countryId" (change)="onCountryChange()">
+                        <option value="" disabled>Select a country</option>
+                        @for (country of countries; track country.countryId) {
+                        <option [value]="country.countryId">{{ country.name }}</option>
+                        }
+                    </select>
+                    @if (orgForm.controls.countryId.touched && orgForm.controls.countryId.invalid) {
+                    <div class="field-error">Country is required.</div>
+                    }
                 </div>
-
                 <div class="form-group">
-                    <label for="subDistrictName">Sub-district / Taluk</label>
-                    <input id="subDistrictName" type="text" formControlName="subDistrictName" />
+                    <label for="stateId">State</label>
+                    <select id="stateId" formControlName="stateId" (change)="onStateChange()">
+                        <option value="" disabled>Select a state</option>
+                        @for (state of states; track state.stateId) {
+                        <option [value]="state.stateId">{{ state.name }}</option>
+                        }
+                    </select>
+                    @if (orgForm.controls.stateId.touched && orgForm.controls.stateId.invalid) {
+                    <div class="field-error">State is required.</div>
+                    }
                 </div>
-
             </div>
 
             <div class="form-row">
-
                 <div class="form-group">
-                    <label for="districtName">District</label>
-                    <input id="districtName" type="text" formControlName="districtName" />
+                    <label for="districtId">District</label>
+                    <select id="districtId" formControlName="districtId" (change)="onDistrictChange()">
+                        <option value="" disabled>Select a district</option>
+                        @for (district of districts; track district.districtId) {
+                        <option [value]="district.districtId">{{ district.name }}</option>
+                        }
+                    </select>
+                    @if (orgForm.controls.districtId.touched && orgForm.controls.districtId.invalid) {
+                    <div class="field-error">District is required.</div>
+                    }
                 </div>
-
                 <div class="form-group">
-                    <label for="stateName">State</label>
-                    <input id="stateName" type="text" formControlName="stateName" />
+                    <label for="subDistrictId">Sub-district / Taluk</label>
+                    <select id="subDistrictId" formControlName="subDistrictId" (change)="onSubDistrictChange()">
+                        <option value="" disabled>Select a Sub District</option>
+                        @for (subDistrict of subDistricts; track subDistrict.subDistrictId) {
+                        <option [value]="subDistrict.subDistrictId">{{ subDistrict.name }}</option>
+                        }
+                    </select>
+                    @if (orgForm.controls.subDistrictId.touched && orgForm.controls.subDistrictId.invalid) {
+                    <div class="field-error">Sub-District is required.</div>
+                    }
                 </div>
-
             </div>
-
             <div class="form-row">
-
                 <div class="form-group">
-                    <label for="country">Country</label>
-                    <input id="country" type="text" formControlName="country" />
+                    <label for="cityId">City</label>
+                    <select id="cityId" formControlName="cityId" (change)="onCityChange()">
+                        <option value="" disabled>Select a city</option>
+                        @for (city of cities; track city.cityId) {
+                        <option [value]="city.cityId">{{ city.name }}</option>
+                        }
+                    </select>
+                    @if (orgForm.controls.cityId.touched && orgForm.controls.cityId.invalid) {
+                    <div class="field-error">City is required.</div>
+                    }
                 </div>
-
                 <div class="form-group">
-                    <label for="postalCode">Postal Code</label>
-                    <input id="postalCode" type="text" formControlName="postalCode" />
+                    <label for="postalCodeId">Postal Code</label>
+                    <select id="postalCodeId" formControlName="postalCodeId" (change)="onPostalCodeChange()">
+                        <option value="" disabled>Select a pincode</option>
+                        @for (postalCode of postalCodes; track postalCode.postalCodeId) {
+                        <option [value]="postalCode.postalCodeId">{{ postalCode.code }}</option>
+                        }
+                    </select>
+                    @if (orgForm.controls.postalCodeId.touched && orgForm.controls.postalCodeId.invalid) {
+                    <div class="field-error">Pincode is required.</div>
+                    }
                 </div>
-
             </div>
 
             <div class="step-actions">
                 <button type="submit" class="primary">Next: Administrator Detail</button>
             </div>
-
         </form>
-
         }
 
         <!-- ============================================================ -->

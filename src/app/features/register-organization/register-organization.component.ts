@@ -1,6 +1,9 @@
-import { Component, inject } from "@angular/core";
+import { Component, inject, OnInit } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { Router, RouterLink } from "@angular/router";
+import { ApiService } from "../../core/api.service";
+import { GeoService } from "../../core/geo.service";
+
 import {
   AbstractControl,
   FormBuilder,
@@ -11,6 +14,50 @@ import {
 import { finalize } from "rxjs";
 
 import { AuthService } from "../../core/auth.service";
+import { HttpParams } from "@angular/common/http";
+
+export interface Country {
+  countryId: number;
+  isoAlpha2?: string;
+  isoAlpha3?: string;
+  name?: string;
+  status?: string;
+}
+
+export interface State {
+  countryId: number;
+  stateId: number;
+  name?: string;
+  status?: string;
+}
+
+export interface District {
+  districtId: number;
+  stateId: number;
+  name?: string;
+  status?: string;
+}
+
+export interface SubDistrict {
+  districtId: number;
+  subDistrictId: number;
+  name?: string;
+  status?: string;
+}
+
+export interface City {
+  cityId: number;
+  subDistrictId: number;
+  name?: string;
+  status?: string;
+}
+
+export interface PostalCode {
+  postalCodeId: number;
+  subDistrictId: number;
+  code?: string;
+  status?: string;
+}
 
 // Mirrors ORGANIZATION_TYPES in organization-admin-ui's
 // organizations.component.ts and organization-admin-service's
@@ -26,7 +73,9 @@ export const ORGANIZATION_TYPES = [
 ];
 
 /** Group-level validator: confirmPassword must match password. */
-function passwordsMatchValidator(group: AbstractControl): ValidationErrors | null {
+function passwordsMatchValidator(
+  group: AbstractControl,
+): ValidationErrors | null {
   const password = group.get("password")?.value;
   const confirmPassword = group.get("confirmPassword")?.value;
 
@@ -51,12 +100,27 @@ function passwordsMatchValidator(group: AbstractControl): ValidationErrors | nul
   templateUrl: "./register-organization.component.html",
   styleUrl: "./register-organization.component.scss",
 })
-export class RegisterOrganizationComponent {
+export class RegisterOrganizationComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly api = inject(ApiService);
+  private readonly geoApi = inject(GeoService);
 
   organizationTypes = ORGANIZATION_TYPES;
+  countries: Country[] = [];
+  states: State[] = [];
+  districts: District[] = [];
+  subDistricts: SubDistrict[] = [];
+  cities: City[] = [];
+  postalCodes: PostalCode[] = [];
+
+  loadingCountries = false;
+  loadingStates = false;
+  loadingDistricts = false;
+  loadingSubDistricts = false;
+  loadingCities = false;
+  loadingPostalCodes = false;
 
   step: 1 | 2 = 1;
   submitting = false;
@@ -67,17 +131,20 @@ export class RegisterOrganizationComponent {
   // ============================================================
 
   orgForm = this.fb.group({
-    organizationName: ["", [Validators.required, Validators.minLength(2), Validators.maxLength(200)]],
+    organizationName: [
+      "",
+      [Validators.required, Validators.minLength(2), Validators.maxLength(200)],
+    ],
     organizationType: ["", Validators.required],
 
     addressLine1: ["", Validators.maxLength(250)],
     addressLine2: ["", Validators.maxLength(250)],
-    city: ["", Validators.maxLength(100)],
-    subDistrictName: ["", Validators.maxLength(100)],
-    districtName: ["", Validators.maxLength(100)],
-    stateName: ["", Validators.maxLength(100)],
-    country: ["India", Validators.maxLength(100)],
-    postalCode: ["", Validators.maxLength(20)],
+    cityId: [null, Validators.min(1)],
+    subDistrictId: [null, Validators.min(1)],
+    districtId: [null, Validators.min(1)],
+    stateId: [null, Validators.min(1)],
+    countryId: [null, Validators.min(1)],
+    postalCodeId: [null, Validators.min(1)],
   });
 
   // ============================================================
@@ -91,18 +158,164 @@ export class RegisterOrganizationComponent {
       middleName: ["", Validators.maxLength(100)],
       displayName: ["", Validators.maxLength(250)],
 
-      username: ["", [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
-      email: ["", [Validators.required, Validators.email, Validators.maxLength(320)]],
+      username: [
+        "",
+        [
+          Validators.required,
+          Validators.minLength(3),
+          Validators.maxLength(100),
+        ],
+      ],
+      email: [
+        "",
+        [Validators.required, Validators.email, Validators.maxLength(320)],
+      ],
 
-      phoneCountryCode: ["+91", [Validators.required, Validators.maxLength(10)]],
+      phoneCountryCode: [
+        "+91",
+        [Validators.required, Validators.maxLength(10)],
+      ],
       phoneNumber: ["", [Validators.required, Validators.maxLength(30)]],
 
-      password: ["", [Validators.required, Validators.minLength(8), Validators.maxLength(256)]],
+      password: [
+        "",
+        [
+          Validators.required,
+          Validators.minLength(8),
+          Validators.maxLength(256),
+        ],
+      ],
       confirmPassword: ["", Validators.required],
     },
     { validators: passwordsMatchValidator },
   );
 
+  // ============================================================
+  // PAGE LOAD
+  // ============================================================
+  ngOnInit(): void {
+    this.loadCountries();
+  }
+
+  loadCountries(): void {
+    this.loadingCountries = true;
+
+    this.geoApi.getGeography<any>("/geography/countries").subscribe({
+      next: (response) => {
+        this.countries = response?.data || response?.items || [];
+        this.loadingCountries = false;
+      },
+      error: (error) => {
+        this.loadingCountries = false;
+        console.error("Failed to load countries:", error);
+      },
+    });
+  }
+
+  onCountryChange(): void {
+    this.loadingStates = true;
+    const countryId = this.orgForm.controls.countryId.value;
+
+    if (!countryId) {
+      this.states = [];
+      return;
+    }
+    
+    this.geoApi.getGeography<any>("/geography/states", { countryId }).subscribe({
+      next: (response) => {
+        this.states = response?.data || response?.items || [];
+        this.loadingStates = false;
+      },
+      error: (error) => {
+        this.loadingStates = false;
+        console.error("Failed to load states:", error);
+      },
+    });
+  }
+
+  onStateChange(): void {
+    this.loadingDistricts = true;
+    const stateId = this.orgForm.controls.stateId.value;
+
+    if (!stateId) {
+      this.districts = [];
+      return;
+    }
+    
+    this.geoApi.getGeography<any>("/geography/districts", { stateId }).subscribe({
+      next: (response) => {
+        this.districts = response?.data || response?.items || [];
+        this.loadingDistricts = false;
+      },
+      error: (error) => {
+        this.loadingDistricts = false;
+        console.error("Failed to load districts:", error);
+      },
+    });
+  }
+
+  onDistrictChange(): void {
+    this.loadingSubDistricts = true;
+    const districtId = this.orgForm.controls.districtId.value;
+
+    if (!districtId) {
+      this.subDistricts = [];
+      return;
+    }
+    
+    this.geoApi.getGeography<any>("/geography/sub-districts", { districtId }).subscribe({
+      next: (response) => {
+        this.subDistricts = response?.data || response?.items || [];
+        this.loadingSubDistricts = false;
+      },
+      error: (error) => {
+        this.loadingSubDistricts = false;
+        console.error("Failed to load districts:", error);
+      },
+    });
+  }
+
+  onSubDistrictChange(): void {
+    this.loadingCities = true;
+    const subDistrictId = this.orgForm.controls.subDistrictId.value;
+
+    if (!subDistrictId) {
+      this.cities = [];
+      return;
+    }
+    
+    this.geoApi.getGeography<any>("/geography/cities", { subDistrictId }).subscribe({
+      next: (response) => {
+        this.cities = response?.data || response?.items || [];
+        this.loadingCities = false;
+      },
+      error: (error) => {
+        this.loadingCities = false;
+        console.error("Failed to load cities/villages:", error);
+      },
+    });
+  }
+
+  onCityChange(): void {
+    this.loadingPostalCodes = true;
+    const cityId = this.orgForm.controls.cityId.value;
+
+    if (!cityId) {
+      this.cities = [];
+      return;
+    }
+    
+    this.geoApi.getGeography<any>("/geography/postal-codes", { cityId }).subscribe({
+      next: (response) => {
+        this.postalCodes = response?.data || response?.items || [];
+        this.loadingPostalCodes = false;
+      },
+      error: (error) => {
+        this.loadingPostalCodes = false;
+        console.error("Failed to load postal codes:", error);
+      },
+    });
+  }
   // ============================================================
   // STEP NAVIGATION
   // ============================================================
@@ -149,19 +362,21 @@ export class RegisterOrganizationComponent {
 
       addressLine1: org.addressLine1?.trim() || null,
       addressLine2: org.addressLine2?.trim() || null,
-      city: org.city?.trim() || null,
-      subDistrictName: org.subDistrictName?.trim() || null,
-      districtName: org.districtName?.trim() || null,
-      stateName: org.stateName?.trim() || null,
-      country: org.country?.trim() || null,
-      postalCode: org.postalCode?.trim() || null,
+      cityId: org.cityId || null,
+      subDistrictId: org.subDistrictId || null,
+      districtId: org.districtId || null,
+      stateId: org.stateId || null,
+      countryId: org.countryId || null,
+      postalCodeId: org.postalCodeId || null,
 
       username: admin.username!.trim(),
       email: admin.email!.trim(),
       firstName: admin.firstName!.trim(),
       lastName: admin.lastName!.trim(),
       middleName: admin.middleName?.trim() || "",
-      displayName: (admin.displayName?.trim() || `${admin.firstName} ${admin.lastName}`.trim()),
+      displayName:
+        admin.displayName?.trim() ||
+        `${admin.firstName} ${admin.lastName}`.trim(),
       phoneCountryCode: admin.phoneCountryCode!.trim(),
       phoneNumber: admin.phoneNumber!.trim(),
       password: admin.password!,
