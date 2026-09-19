@@ -89,14 +89,29 @@ export class OrganizationsComponent implements OnInit {
     },
     { headerName: "Type", field: "organizationType", flex: 1, minWidth: 160 },
     {
-      // Only meaningful when more than one tenant can appear in the grid
-      // (i.e. for SUPERADMIN) — see isSuperAdmin below — but harmless to
-      // always show: a TENANT_ADMIN simply sees the same UUID repeated.
       headerName: "Tenant UUID",
       field: "tenantUuid",
       flex: 1.4,
       minWidth: 220,
     },
+    {
+      headerName: "City",
+      field: "cityName",
+      flex: 1.4,
+      minWidth: 100,
+    },
+    {
+      headerName: "State",
+      field: "stateName",
+      flex: 1.4,
+      minWidth: 100,
+    },
+    {
+      headerName: "Country",
+      field: "countryName",
+      flex: 1.4,
+      minWidth: 100,
+    },    
     {
       headerName: "Status",
       field: "status",
