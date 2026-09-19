@@ -84,7 +84,7 @@ export class OrganizationsComponent implements OnInit {
       minWidth: 220,
       cellRenderer: (params: ICellRendererParams) => {
         const org = params.data;
-        return `<div class="ag-tenant-cell"><strong>${this.escapeHtml(org?.organizationName)}</strong><br><small>${this.escapeHtml(org?.organizationCode)}</small></div>`;
+        return `<div class="ag-org-cell"><strong>${this.escapeHtml(org?.organizationName)}</strong><small>${this.escapeHtml(org?.organizationCode)}</small></div>`;
       },
     },
     { headerName: "Type", field: "organizationType", flex: 1, minWidth: 160 },

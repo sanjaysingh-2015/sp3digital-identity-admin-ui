@@ -1,10 +1,228 @@
+/* =========================================================
+   ORGANIZATIONS PAGE
+
+   Layout/typography (toolbar, panel, buttons, badge, modal-backdrop,
+   summary-item, raw-details, modal-header/close, form-grid) come from the
+   global styles.scss shared by every list page. AG Grid's custom cell
+   content isn't reachable from global styles (it renders inside AG Grid's
+   own DOM, so it needs :host ::ng-deep from *this* component), and .pager /
+   .tenant-summary / .details-modal aren't in the global sheet either — both
+   are re-declared per feature the same way tenants.component.scss and
+   users.component.scss do, so this page matches their look exactly.
+========================================================= */
+
+/* =========================================================
+   AG GRID CONTAINER
+========================================================= */
+
 .organizations-grid {
   width: 100%;
   height: 620px;
 }
 
+/* =========================================================
+   PAGER
+========================================================= */
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--border-color, #e5e7eb);
+}
+
+.pager-summary {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.pager-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pager-controls .secondary {
+  padding: 6px 14px;
+  font-size: 13px;
+}
+
+.pager-page {
+  color: #374151;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* =========================================================
+   AG GRID CUSTOM CELL CONTENT
+========================================================= */
+
+:host ::ng-deep .ag-org-cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+  line-height: 1.25;
+}
+
+:host ::ng-deep .ag-org-cell strong {
+  display: block;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+:host ::ng-deep .ag-org-cell small {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+/* =========================================================
+   AG GRID STATUS
+========================================================= */
+
+:host ::ng-deep .ag-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+:host ::ng-deep .ag-status-badge.good {
+  background: #dcfce7;
+  color: #166534;
+}
+
+:host ::ng-deep .ag-status-badge.warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+:host ::ng-deep .ag-status-badge.danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* =========================================================
+   AG GRID ACTIONS
+========================================================= */
+
+:host ::ng-deep .ag-table-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 100%;
+}
+
+:host ::ng-deep .ag-action-btn {
+  border: 0;
+  background: transparent;
+  padding: 4px 0;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+:host ::ng-deep .ag-action-btn.view {
+  color: #2563eb;
+}
+
+:host ::ng-deep .ag-action-btn:hover {
+  text-decoration: underline;
+}
+
+/* =========================================================
+   AG GRID THEME OVERRIDES
+========================================================= */
+
+:host ::ng-deep .ag-root-wrapper {
+  border: 0 !important;
+  border-radius: 10px;
+}
+
+:host ::ng-deep .ag-header {
+  background: #f8fafc;
+}
+
+:host ::ng-deep .ag-header-cell {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+:host ::ng-deep .ag-row {
+  border-bottom: 1px solid #eef2f7;
+}
+
+:host ::ng-deep .ag-row:hover {
+  background: #fafcff;
+}
+
+:host ::ng-deep .ag-cell {
+  display: flex;
+  align-items: center;
+  color: #334155;
+  font-size: 14px;
+}
+
+:host ::ng-deep .ag-paging-panel {
+  border-top: 1px solid #eef2f7;
+}
+
+/* =========================================================
+   DETAILS MODAL
+========================================================= */
+
+.details-modal {
+  width: min(650px, 100%);
+}
+
+.tenant-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
 @media (max-width: 700px) {
   .organizations-grid {
     height: 550px;
+  }
+
+  .pager {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .pager-controls {
+    justify-content: space-between;
+  }
+
+  .tenant-summary {
+    grid-template-columns: 1fr;
+  }
+
+  :host ::ng-deep .ag-table-actions {
+    gap: 6px;
+  }
+
+  :host ::ng-deep .ag-action-btn {
+    font-size: 12px;
   }
 }
