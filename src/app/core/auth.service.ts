@@ -184,4 +184,25 @@ export class AuthService {
 
     return String(c["tenant_uuid"] ?? c["tenantUuid"] ?? c["tid"] ?? "");
   }
+
+  /**
+   * SUPERADMIN check, client-side.
+   *
+   * The access token's `permissions` claim is a flat array of permission
+   * codes resolved from the user's active role(s) (see
+   * authService.js#resolvePermissions on the identity-admin-service side).
+   * The SUPERADMIN role is seeded with exactly one permission,
+   * ALL_PERMISSIONS, and nothing else currently grants that code — so its
+   * presence is a reliable "is this user a platform superadmin" signal
+   * without needing a dedicated /me or /roles round trip. This mirrors the
+   * same ALL_PERMISSIONS check identity-admin-service's own
+   * authentication.js/authorize() and organization-admin-service's
+   * authorization.js use server-side.
+   */
+  isSuperAdmin(): boolean {
+    const c = this.claims();
+    const permissions = c["permissions"];
+
+    return Array.isArray(permissions) && permissions.includes("ALL_PERMISSIONS");
+  }
 }

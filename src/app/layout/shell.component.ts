@@ -15,6 +15,7 @@ import { UiService } from '../core/ui.service';
         <a routerLink="/dashboard" routerLinkActive="active">▦ <span>Dashboard</span></a>
         <div class="nav-label">IDENTITY</div>
         <a routerLink="/tenants" routerLinkActive="active">▣ <span>Tenants</span></a>
+        <a routerLink="/organizations" routerLinkActive="active">🏢 <span>Organizations</span></a>
         <a routerLink="/users" routerLinkActive="active">♙ <span>Users</span></a>
         <a routerLink="/roles" routerLinkActive="active">🔐 <span>Roles</span></a>
         <a routerLink="/permissions" routerLinkActive="active">🛡 <span>Permissions</span></a>

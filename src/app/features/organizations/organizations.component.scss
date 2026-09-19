@@ -1,0 +1,10 @@
+.organizations-grid {
+  width: 100%;
+  height: 620px;
+}
+
+@media (max-width: 700px) {
+  .organizations-grid {
+    height: 550px;
+  }
+}
