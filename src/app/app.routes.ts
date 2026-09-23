@@ -26,7 +26,8 @@ export const routes: Routes = [
       { path: 'audit-logs', loadComponent: () => import('./features/audit/audit.component').then(m => m.AuditComponent) },
       { path: 'sessions', loadComponent: () => import('./features/sessions/sessions.component').then(m => m.SessionsComponent) },
       { path: 'tenants', loadComponent: () => import('./features/tenants/tenants.component').then(m => m.TenantsComponent) },
-      { path: 'organizations', loadComponent: () => import('./features/organizations/organizations.component').then(m => m.OrganizationsComponent) }
+      { path: 'organizations', loadComponent: () => import('./features/organizations/organizations.component').then(m => m.OrganizationsComponent) },
+      { path: 'appointments', loadComponent: () => import('./features/appointments/appointments.component').then(m => m.AppointmentsComponent) }
     ]
   },
   { path: '**', redirectTo: '' }

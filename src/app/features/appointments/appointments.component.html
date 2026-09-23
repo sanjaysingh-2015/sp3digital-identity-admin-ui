@@ -1,0 +1,119 @@
+<app-page eyebrow="APPOINTMENTS" [title]="pageTitle" [description]="pageDescription">
+</app-page>
+
+<!-- =========================================================
+     SEARCH / FILTER TOOLBAR
+========================================================= -->
+
+<div class="toolbar">
+  <input type="text" [(ngModel)]="search" (keyup.enter)="onFilterChange()"
+    placeholder="Search patient name, phone, or token number" />
+  <select [(ngModel)]="status" (change)="onFilterChange()">
+    <option value="">All statuses</option>
+    @for (s of appointmentStatuses; track s) {
+    <option [value]="s">{{ s }}</option>
+    }
+  </select>
+  <input type="date" [(ngModel)]="dateFrom" (change)="onFilterChange()" title="From date" />
+  <input type="date" [(ngModel)]="dateTo" (change)="onFilterChange()" title="To date" />
+  <button type="button" class="secondary" (click)="load()" [disabled]="loading">
+    @if (loading) {
+    Loading...
+    } @else {
+    Refresh
+    }
+  </button>
+</div>
+
+<!-- =========================================================
+     AG GRID
+========================================================= -->
+<div class="panel grid-panel">
+  <ag-grid-angular class="appointments-grid" [rowData]="rows" [columnDefs]="columnDefs" [defaultColDef]="defaultColDef"
+    [gridOptions]="gridOptions" (gridReady)="onGridReady($event)">
+  </ag-grid-angular>
+
+  <!-- =========================================================
+       PAGER (server-side — one API page loaded per navigation)
+  ========================================================= -->
+  <div class="pager">
+    <span class="pager-summary">
+      @if (totalItems > 0) {
+      Showing {{ rangeStart }}–{{ rangeEnd }} of {{ totalItems }}
+      } @else {
+      No results
+      }
+    </span>
+    <div class="pager-controls">
+      <button type="button" class="secondary" (click)="goToPage(page - 1)" [disabled]="!hasPreviousPage || loading">
+        Previous
+      </button>
+      <span class="pager-page">
+        Page {{ page }} of {{ totalPages }}
+      </span>
+      <button type="button" class="secondary" (click)="goToPage(page + 1)" [disabled]="!hasNextPage || loading">
+        Next
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================
+     APPOINTMENT DETAILS MODAL
+========================================================= -->
+@if (selected) {
+<div class="modal-backdrop" (click)="closeDetails()">
+  <div class="modal details-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <h3>Appointment details</h3>
+        <p>Read-only — booking management is a separate, not-yet-built feature.</p>
+      </div>
+      <button type="button" class="modal-close" (click)="closeDetails()" aria-label="Close">
+        ×
+      </button>
+    </div>
+
+    <div class="tenant-summary">
+      <div class="summary-item"><span>Patient</span><strong>{{ selected.patientName || "—" }}</strong></div>
+      <div class="summary-item"><span>Phone</span><strong>{{ selected.patientPhone || "—" }}</strong></div>
+      <div class="summary-item"><span>Email</span><strong>{{ selected.patientEmail || "—" }}</strong></div>
+      <div class="summary-item"><span>Tenant UUID</span><strong>{{ selected.tenantUuid || "—" }}</strong></div>
+      <div class="summary-item"><span>Facility</span><strong>{{ selected.facilityId || "—" }}</strong></div>
+      <div class="summary-item"><span>Facility service</span><strong>{{ selected.facilityServiceId || "—" }}</strong></div>
+      <div class="summary-item"><span>Date</span><strong>{{ selected.appointmentDate || "—" }}</strong></div>
+      <div class="summary-item"><span>Time</span><strong>{{ selected.startTime }}–{{ selected.endTime }}</strong></div>
+      <div class="summary-item"><span>Token</span><strong>{{ selected.tokenNumber || "—" }}</strong></div>
+      <div class="summary-item"><span>Booking channel</span><strong>{{ selected.bookingChannel || "—" }}</strong></div>
+      <div class="summary-item">
+        <span>Status</span>
+        <span class="badge" [class.good]="['BOOKED','CONFIRMED','CHECKED_IN','COMPLETED'].includes(selected.status)"
+          [class.warning]="['IN_PROGRESS','RESCHEDULED'].includes(selected.status)"
+          [class.danger]="['CANCELLED','NO_SHOW'].includes(selected.status)">
+          {{ selected.status || "—" }}
+        </span>
+      </div>
+      @if (selected.status === 'CANCELLED') {
+      <div class="summary-item"><span>Cancellation notes</span><strong>{{ selected.cancellationNotes || "—" }}</strong></div>
+      }
+      @if (selected.notes) {
+      <div class="summary-item"><span>Notes</span><strong>{{ selected.notes }}</strong></div>
+      }
+    </div>
+
+    <details class="raw-details">
+      <summary>View raw response</summary>
+      <pre>{{ selected | json }}</pre>
+    </details>
+
+    <div class="modal-actions">
+      <button type="button" class="secondary" (click)="closeDetails()">Close</button>
+    </div>
+  </div>
+</div>
+}
+
+<!-- =========================================================
+     NOTIFICATION MODAL
+========================================================= -->
+<app-notification-modal #notificationModal></app-notification-modal>

@@ -1,0 +1,698 @@
+diff --git a/src/app/app.routes.ts b/src/app/app.routes.ts
+index 6d36276..a450fe9 100644
+--- a/src/app/app.routes.ts
++++ b/src/app/app.routes.ts
+@@ -26,7 +26,8 @@ export const routes: Routes = [
+       { path: 'audit-logs', loadComponent: () => import('./features/audit/audit.component').then(m => m.AuditComponent) },
+       { path: 'sessions', loadComponent: () => import('./features/sessions/sessions.component').then(m => m.SessionsComponent) },
+       { path: 'tenants', loadComponent: () => import('./features/tenants/tenants.component').then(m => m.TenantsComponent) },
+-      { path: 'organizations', loadComponent: () => import('./features/organizations/organizations.component').then(m => m.OrganizationsComponent) }
++      { path: 'organizations', loadComponent: () => import('./features/organizations/organizations.component').then(m => m.OrganizationsComponent) },
++      { path: 'appointments', loadComponent: () => import('./features/appointments/appointments.component').then(m => m.AppointmentsComponent) }
+     ]
+   },
+   { path: '**', redirectTo: '' }
+diff --git a/src/app/core/appointment-api.service.ts b/src/app/core/appointment-api.service.ts
+new file mode 100644
+index 0000000..fcba99c
+--- /dev/null
++++ b/src/app/core/appointment-api.service.ts
+@@ -0,0 +1,27 @@
++import { Injectable } from "@angular/core";
++import { HttpClient, HttpParams } from "@angular/common/http";
++import { environment } from "./config";
++
++/**
++ * Calls sp3digital-appointment-admin-service's own API (appointments,
++ * slot configs) from within identity-admin-ui.
++ *
++ * No auth headers set here on purpose — same reasoning as OrgApiService:
++ * auth.interceptor.ts already attaches `Authorization: Bearer <realToken>`
++ * to every outgoing HttpClient request app-wide, and appointment-admin
++ * -service verifies tokens minted by identity-admin-service directly, so
++ * the logged-in user's own tenant_uuid/permissions claims are exactly
++ * what it sees and scopes its data by.
++ */
++@Injectable({ providedIn: "root" })
++export class AppointmentApiService {
++  constructor(private http: HttpClient) {}
++
++  get<T>(path: string, query?: Record<string, string | number | undefined>) {
++    let params = new HttpParams();
++    Object.entries(query ?? {}).forEach(([k, v]) => {
++      if (v !== undefined && v !== "") params = params.set(k, String(v));
++    });
++    return this.http.get<T>(`${environment.appointmentBaseUrl}${path}`, { params });
++  }
++}
+diff --git a/src/app/core/config.ts b/src/app/core/config.ts
+index da561cf..522c0a9 100644
+--- a/src/app/core/config.ts
++++ b/src/app/core/config.ts
+@@ -1,5 +1,7 @@
+ export const environment = {
+   apiBaseUrl: 'http://localhost:3000/api/v1/identity-admin',
+   orgBaseUrl: 'http://localhost:3100/api/v1/organization-admin',
++  // sp3digital-appointment-admin-service.
++  appointmentBaseUrl: 'http://localhost:3200/api/v1/appointment-admin',
+   internalServiceToken: 'cvLLdJv2EV1ZvA5NM1Jr5CY1WfzUc-CN8bs8m4El39nW7a1t8pewr4SfgSjvz1wr'
+ };
+diff --git a/src/app/features/appointments/appointments.component.html b/src/app/features/appointments/appointments.component.html
+new file mode 100644
+index 0000000..938cc9c
+--- /dev/null
++++ b/src/app/features/appointments/appointments.component.html
+@@ -0,0 +1,119 @@
++<app-page eyebrow="APPOINTMENTS" [title]="pageTitle" [description]="pageDescription">
++</app-page>
++
++<!-- =========================================================
++     SEARCH / FILTER TOOLBAR
++========================================================= -->
++
++<div class="toolbar">
++  <input type="text" [(ngModel)]="search" (keyup.enter)="onFilterChange()"
++    placeholder="Search patient name, phone, or token number" />
++  <select [(ngModel)]="status" (change)="onFilterChange()">
++    <option value="">All statuses</option>
++    @for (s of appointmentStatuses; track s) {
++    <option [value]="s">{{ s }}</option>
++    }
++  </select>
++  <input type="date" [(ngModel)]="dateFrom" (change)="onFilterChange()" title="From date" />
++  <input type="date" [(ngModel)]="dateTo" (change)="onFilterChange()" title="To date" />
++  <button type="button" class="secondary" (click)="load()" [disabled]="loading">
++    @if (loading) {
++    Loading...
++    } @else {
++    Refresh
++    }
++  </button>
++</div>
++
++<!-- =========================================================
++     AG GRID
++========================================================= -->
++<div class="panel grid-panel">
++  <ag-grid-angular class="appointments-grid" [rowData]="rows" [columnDefs]="columnDefs" [defaultColDef]="defaultColDef"
++    [gridOptions]="gridOptions" (gridReady)="onGridReady($event)">
++  </ag-grid-angular>
++
++  <!-- =========================================================
++       PAGER (server-side — one API page loaded per navigation)
++  ========================================================= -->
++  <div class="pager">
++    <span class="pager-summary">
++      @if (totalItems > 0) {
++      Showing {{ rangeStart }}–{{ rangeEnd }} of {{ totalItems }}
++      } @else {
++      No results
++      }
++    </span>
++    <div class="pager-controls">
++      <button type="button" class="secondary" (click)="goToPage(page - 1)" [disabled]="!hasPreviousPage || loading">
++        Previous
++      </button>
++      <span class="pager-page">
++        Page {{ page }} of {{ totalPages }}
++      </span>
++      <button type="button" class="secondary" (click)="goToPage(page + 1)" [disabled]="!hasNextPage || loading">
++        Next
++      </button>
++    </div>
++  </div>
++</div>
++
++<!-- =========================================================
++     APPOINTMENT DETAILS MODAL
++========================================================= -->
++@if (selected) {
++<div class="modal-backdrop" (click)="closeDetails()">
++  <div class="modal details-modal" (click)="$event.stopPropagation()">
++    <div class="modal-header">
++      <div>
++        <h3>Appointment details</h3>
++        <p>Read-only — booking management is a separate, not-yet-built feature.</p>
++      </div>
++      <button type="button" class="modal-close" (click)="closeDetails()" aria-label="Close">
++        ×
++      </button>
++    </div>
++
++    <div class="tenant-summary">
++      <div class="summary-item"><span>Patient</span><strong>{{ selected.patientName || "—" }}</strong></div>
++      <div class="summary-item"><span>Phone</span><strong>{{ selected.patientPhone || "—" }}</strong></div>
++      <div class="summary-item"><span>Email</span><strong>{{ selected.patientEmail || "—" }}</strong></div>
++      <div class="summary-item"><span>Tenant UUID</span><strong>{{ selected.tenantUuid || "—" }}</strong></div>
++      <div class="summary-item"><span>Facility</span><strong>{{ selected.facilityId || "—" }}</strong></div>
++      <div class="summary-item"><span>Facility service</span><strong>{{ selected.facilityServiceId || "—" }}</strong></div>
++      <div class="summary-item"><span>Date</span><strong>{{ selected.appointmentDate || "—" }}</strong></div>
++      <div class="summary-item"><span>Time</span><strong>{{ selected.startTime }}–{{ selected.endTime }}</strong></div>
++      <div class="summary-item"><span>Token</span><strong>{{ selected.tokenNumber || "—" }}</strong></div>
++      <div class="summary-item"><span>Booking channel</span><strong>{{ selected.bookingChannel || "—" }}</strong></div>
++      <div class="summary-item">
++        <span>Status</span>
++        <span class="badge" [class.good]="['BOOKED','CONFIRMED','CHECKED_IN','COMPLETED'].includes(selected.status)"
++          [class.warning]="['IN_PROGRESS','RESCHEDULED'].includes(selected.status)"
++          [class.danger]="['CANCELLED','NO_SHOW'].includes(selected.status)">
++          {{ selected.status || "—" }}
++        </span>
++      </div>
++      @if (selected.status === 'CANCELLED') {
++      <div class="summary-item"><span>Cancellation notes</span><strong>{{ selected.cancellationNotes || "—" }}</strong></div>
++      }
++      @if (selected.notes) {
++      <div class="summary-item"><span>Notes</span><strong>{{ selected.notes }}</strong></div>
++      }
++    </div>
++
++    <details class="raw-details">
++      <summary>View raw response</summary>
++      <pre>{{ selected | json }}</pre>
++    </details>
++
++    <div class="modal-actions">
++      <button type="button" class="secondary" (click)="closeDetails()">Close</button>
++    </div>
++  </div>
++</div>
++}
++
++<!-- =========================================================
++     NOTIFICATION MODAL
++========================================================= -->
++<app-notification-modal #notificationModal></app-notification-modal>
+diff --git a/src/app/features/appointments/appointments.component.scss b/src/app/features/appointments/appointments.component.scss
+new file mode 100644
+index 0000000..d3da1ff
+--- /dev/null
++++ b/src/app/features/appointments/appointments.component.scss
+@@ -0,0 +1,228 @@
++/* =========================================================
++   ORGANIZATIONS PAGE
++
++   Layout/typography (toolbar, panel, buttons, badge, modal-backdrop,
++   summary-item, raw-details, modal-header/close, form-grid) come from the
++   global styles.scss shared by every list page. AG Grid's custom cell
++   content isn't reachable from global styles (it renders inside AG Grid's
++   own DOM, so it needs :host ::ng-deep from *this* component), and .pager /
++   .tenant-summary / .details-modal aren't in the global sheet either — both
++   are re-declared per feature the same way tenants.component.scss and
++   users.component.scss do, so this page matches their look exactly.
++========================================================= */
++
++/* =========================================================
++   AG GRID CONTAINER
++========================================================= */
++
++.appointments-grid {
++  width: 100%;
++  height: 620px;
++}
++
++/* =========================================================
++   PAGER
++========================================================= */
++
++.pager {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  gap: 16px;
++  padding: 14px 16px;
++  border-top: 1px solid var(--border-color, #e5e7eb);
++}
++
++.pager-summary {
++  color: #64748b;
++  font-size: 13px;
++}
++
++.pager-controls {
++  display: flex;
++  align-items: center;
++  gap: 12px;
++}
++
++.pager-controls .secondary {
++  padding: 6px 14px;
++  font-size: 13px;
++}
++
++.pager-page {
++  color: #374151;
++  font-size: 13px;
++  font-weight: 600;
++  white-space: nowrap;
++}
++
++/* =========================================================
++   AG GRID CUSTOM CELL CONTENT
++========================================================= */
++
++:host ::ng-deep .ag-appointment-cell {
++  display: flex;
++  flex-direction: column;
++  justify-content: center;
++  height: 100%;
++  line-height: 1.25;
++}
++
++:host ::ng-deep .ag-appointment-cell strong {
++  display: block;
++  color: #111827;
++  font-size: 14px;
++  font-weight: 600;
++}
++
++:host ::ng-deep .ag-appointment-cell small {
++  display: block;
++  margin-top: 4px;
++  color: #64748b;
++  font-size: 12px;
++}
++
++/* =========================================================
++   AG GRID STATUS
++========================================================= */
++
++:host ::ng-deep .ag-status-badge {
++  display: inline-flex;
++  align-items: center;
++  padding: 4px 9px;
++  border-radius: 999px;
++  background: #f1f5f9;
++  color: #475569;
++  font-size: 11px;
++  font-weight: 700;
++  letter-spacing: 0.03em;
++}
++
++:host ::ng-deep .ag-status-badge.good {
++  background: #dcfce7;
++  color: #166534;
++}
++
++:host ::ng-deep .ag-status-badge.warning {
++  background: #fef3c7;
++  color: #92400e;
++}
++
++:host ::ng-deep .ag-status-badge.danger {
++  background: #fee2e2;
++  color: #991b1b;
++}
++
++/* =========================================================
++   AG GRID ACTIONS
++========================================================= */
++
++:host ::ng-deep .ag-table-actions {
++  display: flex;
++  align-items: center;
++  gap: 12px;
++  height: 100%;
++}
++
++:host ::ng-deep .ag-action-btn {
++  border: 0;
++  background: transparent;
++  padding: 4px 0;
++  font-size: 13px;
++  font-weight: 600;
++  cursor: pointer;
++}
++
++:host ::ng-deep .ag-action-btn.view {
++  color: #2563eb;
++}
++
++:host ::ng-deep .ag-action-btn:hover {
++  text-decoration: underline;
++}
++
++/* =========================================================
++   AG GRID THEME OVERRIDES
++========================================================= */
++
++:host ::ng-deep .ag-root-wrapper {
++  border: 0 !important;
++  border-radius: 10px;
++}
++
++:host ::ng-deep .ag-header {
++  background: #f8fafc;
++}
++
++:host ::ng-deep .ag-header-cell {
++  font-size: 12px;
++  font-weight: 700;
++  color: #64748b;
++  text-transform: uppercase;
++  letter-spacing: 0.04em;
++}
++
++:host ::ng-deep .ag-row {
++  border-bottom: 1px solid #eef2f7;
++}
++
++:host ::ng-deep .ag-row:hover {
++  background: #fafcff;
++}
++
++:host ::ng-deep .ag-cell {
++  display: flex;
++  align-items: center;
++  color: #334155;
++  font-size: 14px;
++}
++
++:host ::ng-deep .ag-paging-panel {
++  border-top: 1px solid #eef2f7;
++}
++
++/* =========================================================
++   DETAILS MODAL
++========================================================= */
++
++.details-modal {
++  width: min(650px, 100%);
++}
++
++.tenant-summary {
++  display: grid;
++  grid-template-columns: repeat(2, minmax(0, 1fr));
++  gap: 16px;
++}
++
++/* =========================================================
++   RESPONSIVE
++========================================================= */
++
++@media (max-width: 700px) {
++  .appointments-grid {
++    height: 550px;
++  }
++
++  .pager {
++    flex-direction: column;
++    align-items: stretch;
++    gap: 10px;
++  }
++
++  .pager-controls {
++    justify-content: space-between;
++  }
++
++  .tenant-summary {
++    grid-template-columns: 1fr;
++  }
++
++  :host ::ng-deep .ag-table-actions {
++    gap: 6px;
++  }
++
++  :host ::ng-deep .ag-action-btn {
++    font-size: 12px;
++  }
++}
+diff --git a/src/app/features/appointments/appointments.component.ts b/src/app/features/appointments/appointments.component.ts
+new file mode 100644
+index 0000000..5edc782
+--- /dev/null
++++ b/src/app/features/appointments/appointments.component.ts
+@@ -0,0 +1,262 @@
++import { Component, OnInit, ViewChild } from "@angular/core";
++import { CommonModule } from "@angular/common";
++import { FormsModule } from "@angular/forms";
++
++import { AgGridAngular } from "ag-grid-angular";
++import {
++  ColDef,
++  GridApi,
++  GridReadyEvent,
++  ICellRendererParams,
++  ModuleRegistry,
++  AllCommunityModule,
++} from "ag-grid-community";
++
++import { AppointmentApiService } from "../../core/appointment-api.service";
++import { AuthService } from "../../core/auth.service";
++import { PageComponent } from "../../shared/page.component";
++import { NotificationModalComponent } from "../../shared/components/notification-modal/notification-modal";
++
++ModuleRegistry.registerModules([AllCommunityModule]);
++
++// Matches STATUSES in appointment-admin-service's appointment.validation.js
++// — keep in sync if that list changes.
++const APPOINTMENT_STATUSES = [
++  "BOOKED",
++  "CONFIRMED",
++  "CHECKED_IN",
++  "IN_PROGRESS",
++  "COMPLETED",
++  "CANCELLED",
++  "NO_SHOW",
++  "RESCHEDULED",
++];
++
++@Component({
++  selector: "app-appointments",
++  standalone: true,
++  imports: [
++    CommonModule,
++    FormsModule,
++    PageComponent,
++    AgGridAngular,
++    NotificationModalComponent,
++  ],
++  templateUrl: "./appointments.component.html",
++  styleUrls: ["./appointments.component.scss"],
++})
++export class AppointmentsComponent implements OnInit {
++  appointmentStatuses = APPOINTMENT_STATUSES;
++
++  // =========================================================
++  // DATA
++  // =========================================================
++
++  rows: any[] = [];
++
++  search = "";
++  status = "";
++  dateFrom = "";
++  dateTo = "";
++
++  page = 1;
++  limit = 20;
++  totalItems = 0;
++  totalPages = 1;
++
++  loading = false;
++
++  selected: any = null;
++
++  @ViewChild("notificationModal")
++  notificationModal!: NotificationModalComponent;
++
++  // =========================================================
++  // AG GRID
++  // =========================================================
++
++  private gridApi!: GridApi;
++
++  columnDefs: ColDef[] = [
++    {
++      headerName: "Patient",
++      flex: 1.5,
++      minWidth: 200,
++      cellRenderer: (params: ICellRendererParams) => {
++        const row = params.data;
++        return `<div class="ag-appointment-cell"><strong>${this.escapeHtml(row?.patientName)}</strong><small>${this.escapeHtml(row?.patientPhone)}</small></div>`;
++      },
++    },
++    {
++      headerName: "Date / Time",
++      flex: 1.2,
++      minWidth: 170,
++      valueGetter: (params) => `${params.data?.appointmentDate} · ${params.data?.startTime}–${params.data?.endTime}`,
++    },
++    { headerName: "Token", field: "tokenNumber", flex: 0.6, minWidth: 90 },
++    {
++      headerName: "Tenant UUID",
++      field: "tenantUuid",
++      flex: 1.4,
++      minWidth: 220,
++    },
++    { headerName: "Facility", field: "facilityId", flex: 0.7, minWidth: 100 },
++    { headerName: "Channel", field: "bookingChannel", flex: 0.8, minWidth: 110 },
++    {
++      headerName: "Status",
++      field: "status",
++      flex: 0.9,
++      minWidth: 140,
++      cellRenderer: (params: ICellRendererParams) => {
++        const status = params.value || "—";
++        let className = "ag-status-badge";
++        if (status === "COMPLETED" || status === "CHECKED_IN" || status === "CONFIRMED" || status === "BOOKED") className += " good";
++        else if (status === "IN_PROGRESS" || status === "RESCHEDULED") className += " warning";
++        else if (status === "CANCELLED" || status === "NO_SHOW") className += " danger";
++        return `<span class="${className}">${this.escapeHtml(status)}</span>`;
++      },
++    },
++    {
++      headerName: "Actions",
++      flex: 0.8,
++      minWidth: 120,
++      sortable: false,
++      filter: false,
++      cellRenderer: () => {
++        return `<div class="ag-table-actions"><button type="button" class="ag-action-btn view" data-action="view">View</button></div>`;
++      },
++      onCellClicked: (params) => {
++        const action = (params.event?.target as HTMLElement)?.getAttribute("data-action");
++        if (action === "view") this.select(params.data);
++      },
++    },
++  ];
++
++  defaultColDef: ColDef = { resizable: true, sortable: true, filter: true };
++  gridOptions = {
++    rowHeight: 64,
++    headerHeight: 44,
++    suppressCellFocus: true,
++    animateRows: true,
++  };
++
++  constructor(
++    private appointmentApi: AppointmentApiService,
++    public auth: AuthService,
++  ) {}
++
++  // =========================================================
++  // ROLE-BASED PAGE COPY
++  //
++  // The actual data scoping (all tenants vs. just this one) is enforced
++  // server-side by appointment-admin-service from the same JWT — see its
++  // appointmentController.js#isSuperAdmin(). This is display-only.
++  // =========================================================
++
++  get isSuperAdmin(): boolean {
++    return this.auth.isSuperAdmin();
++  }
++
++  get pageTitle(): string {
++    return this.isSuperAdmin ? "Appointments" : "My Tenant's Appointments";
++  }
++
++  get pageDescription(): string {
++    return this.isSuperAdmin
++      ? "All appointments across every tenant on the platform."
++      : "Appointments booked within your tenant.";
++  }
++
++  ngOnInit(): void {
++    this.load();
++  }
++
++  onGridReady(event: GridReadyEvent): void {
++    this.gridApi = event.api;
++    this.gridApi.sizeColumnsToFit();
++  }
++
++  load(page: number = this.page): void {
++    this.loading = true;
++    this.page = page;
++
++    this.appointmentApi
++      .get<any>("/appointments", {
++        page: this.page,
++        limit: this.limit,
++        search: this.search,
++        status: this.status,
++        dateFrom: this.dateFrom,
++        dateTo: this.dateTo,
++      })
++      .subscribe({
++        next: (response) => {
++          this.rows = response?.data || [];
++
++          const pagination = response?.pagination;
++          this.page = pagination?.page ?? this.page;
++          this.limit = pagination?.limit ?? this.limit;
++          this.totalItems = pagination?.totalItems ?? this.rows.length;
++          this.totalPages = pagination?.totalPages ?? 1;
++
++          this.loading = false;
++
++          if (this.gridApi) {
++            this.gridApi.setGridOption("rowData", this.rows);
++            setTimeout(() => this.gridApi.sizeColumnsToFit());
++          }
++        },
++        error: (error) => {
++          this.loading = false;
++          console.error("Failed to load appointments:", error);
++          this.notificationModal.open({
++            type: "ERROR",
++            title: "Failed to load appointments",
++            message: error,
++            contentType: "TEXT",
++            autoCloseAfter: 4000,
++          });
++        },
++      });
++  }
++
++  onFilterChange(): void {
++    this.load(1);
++  }
++
++  goToPage(page: number): void {
++    if (page < 1 || page > this.totalPages || page === this.page || this.loading) return;
++    this.load(page);
++  }
++
++  get hasPreviousPage(): boolean {
++    return this.page > 1;
++  }
++  get hasNextPage(): boolean {
++    return this.page < this.totalPages;
++  }
++  get rangeStart(): number {
++    return this.totalItems === 0 ? 0 : (this.page - 1) * this.limit + 1;
++  }
++  get rangeEnd(): number {
++    return Math.min(this.page * this.limit, this.totalItems);
++  }
++
++  select(appointment: any): void {
++    this.selected = appointment;
++  }
++
++  closeDetails(): void {
++    this.selected = null;
++  }
++
++  private escapeHtml(value: any): string {
++    if (value === null || value === undefined) return "";
++    return String(value)
++      .replace(/&/g, "&amp;")
++      .replace(/</g, "&lt;")
++      .replace(/>/g, "&gt;")
++      .replace(/"/g, "&quot;")
++      .replace(/'/g, "&#039;");
++  }
++}
+diff --git a/src/app/layout/shell.component.ts b/src/app/layout/shell.component.ts
+index 8e90841..8b962de 100644
+--- a/src/app/layout/shell.component.ts
++++ b/src/app/layout/shell.component.ts
+@@ -16,6 +16,7 @@ import { UiService } from '../core/ui.service';
+         <div class="nav-label">IDENTITY</div>
+         <a routerLink="/tenants" routerLinkActive="active">▣ <span>Tenants</span></a>
+         <a routerLink="/organizations" routerLinkActive="active">🏢 <span>Organizations</span></a>
++        <a routerLink="/appointments" routerLinkActive="active">📅 <span>Appointments</span></a>
+         <a routerLink="/users" routerLinkActive="active">♙ <span>Users</span></a>
+         <a routerLink="/roles" routerLinkActive="active">🔐 <span>Roles</span></a>
+         <a routerLink="/permissions" routerLinkActive="active">🛡 <span>Permissions</span></a>
